@@ -28,8 +28,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          VITE_ASSET_VERSION: ${{ github.sha }}
       # The bare Pages URL should open the game directly.
       - run: cp dist/client/game.html dist/client/index.html
+      - name: Stamp Pages assets with commit SHA
+        run: |
+          for file in dist/client/game.html dist/client/index.html; do
+            perl -0pi -e 's|\./game\.js|./game.js?v=$ENV{GITHUB_SHA}|g; s|\./game\.css|./game.css?v=$ENV{GITHUB_SHA}|g; s|\./modulepreload-polyfill\.js|./modulepreload-polyfill.js?v=$ENV{GITHUB_SHA}|g' "$file"
+          done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

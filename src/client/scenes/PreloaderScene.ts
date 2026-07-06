@@ -2,6 +2,11 @@ import * as Phaser from 'phaser';
 
 type ManifestImage = { key: string; file: string };
 
+const assetUrl = (path: string): string => {
+  const version = import.meta.env.VITE_ASSET_VERSION;
+  return version ? `${path}?v=${encodeURIComponent(version)}` : path;
+};
+
 /**
  * Entries from public/assets/manifest.json — the drop-in art pipeline
  * described in ASSETS.md. Malformed or missing manifests yield no entries.
@@ -43,14 +48,15 @@ export class PreloaderScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.json('asset-manifest', 'assets/manifest.json');
+    this.load.json('asset-manifest', assetUrl('assets/manifest.json'));
   }
 
   create(): void {
     for (const { key, file } of manifestImages(
       this.cache.json.get('asset-manifest')
     )) {
-      if (!this.textures.exists(key)) this.load.image(key, `assets/${file}`);
+      if (!this.textures.exists(key))
+        this.load.image(key, assetUrl(`assets/${file}`));
     }
     if (this.load.list.size > 0) {
       // A missing file logs a load error and simply keeps its fallback.
