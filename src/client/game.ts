@@ -1,0 +1,32 @@
+import * as Phaser from 'phaser';
+import { AUTO, Game } from 'phaser';
+import { BootScene } from './scenes/BootScene';
+import { PreloaderScene } from './scenes/PreloaderScene';
+import { HomeScene } from './scenes/HomeScene';
+import { BattleScene } from './scenes/BattleScene';
+
+/**
+ * Fixed logical resolution of 1280x720, scaled to fit the web view while
+ * preserving aspect ratio. All gameplay coordinates (gesture thresholds, hit
+ * zones, HUD layout) are expressed in this logical space.
+ */
+const config: Phaser.Types.Core.GameConfig = {
+  type: AUTO,
+  parent: 'game-container',
+  backgroundColor: '#141008',
+  disableContextMenu: true,
+  input: {
+    activePointers: 3,
+  },
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: 1280,
+    height: 720,
+  },
+  scene: [BootScene, PreloaderScene, HomeScene, BattleScene],
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  new Game(config);
+});
