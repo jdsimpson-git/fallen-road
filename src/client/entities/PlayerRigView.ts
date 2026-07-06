@@ -8,7 +8,10 @@ const SHIELD_REST = { x: 195, y: 795 };
 const SHIELD_RAISED = { x: 290, y: 625 };
 
 /** Swing offsets (where the sword lunges) per swipe direction. */
-const SWING_VECTORS: Record<SwipeDirection, { x: number; y: number; angle: number }> = {
+const SWING_VECTORS: Record<
+  SwipeDirection,
+  { x: number; y: number; angle: number }
+> = {
   left: { x: -300, y: -60, angle: -110 },
   right: { x: 120, y: -80, angle: 40 },
   up: { x: -80, y: -260, angle: -10 },
@@ -33,9 +36,9 @@ export class PlayerRigView {
   constructor(private readonly scene: Phaser.Scene) {
     // Sword: supplied sprite art when present, procedural silhouette otherwise.
     this.sword = scene.add.container(SWORD_REST.x, SWORD_REST.y);
-    if (scene.textures.exists('player-sword')) {
+    if (scene.textures.exists('fp_sword')) {
       // Art contract (ASSETS.md): blade points up, grip sits at 85% height.
-      const art = scene.add.image(0, 40, 'player-sword').setOrigin(0.5, 0.85);
+      const art = scene.add.image(0, 40, 'fp_sword').setOrigin(0.5, 0.85);
       art.setScale(310 / art.height);
       this.sword.add(art);
     } else {
@@ -57,7 +60,10 @@ export class PlayerRigView {
         strokeColor: PAPER.rim,
       });
       crossGuard.setY(0);
-      const grip = paperRect(scene, 20, 60, PAPER.glove, { radius: 9, strokeWidth: 0 });
+      const grip = paperRect(scene, 20, 60, PAPER.glove, {
+        radius: 9,
+        strokeWidth: 0,
+      });
       grip.setY(36);
       const fist = paperRect(scene, 46, 40, PAPER.glove, {
         radius: 16,
@@ -84,15 +90,17 @@ export class PlayerRigView {
     // Round shield: a dark disc that catches the horizon light on its rim.
     this.shield = scene.add.container(SHIELD_REST.x, SHIELD_REST.y);
     const radius = 128;
-    if (scene.textures.exists('player-shield')) {
-      const art = scene.add.image(0, 0, 'player-shield');
+    if (scene.textures.exists('round_shield')) {
+      const art = scene.add.image(0, 0, 'round_shield');
       art.setScale((radius * 2) / art.width);
       this.shield.add(art);
     } else {
       const plate = scene.add
         .circle(0, 0, radius, PAPER.enemyShield)
         .setStrokeStyle(3, PAPER.rim, 0.7);
-      const inner = scene.add.circle(0, 0, radius * 0.7).setStrokeStyle(2, PAPER.rim, 0.35);
+      const inner = scene.add
+        .circle(0, 0, radius * 0.7)
+        .setStrokeStyle(2, PAPER.rim, 0.35);
       inner.setFillStyle(0, 0);
       const boss = scene.add
         .circle(0, 0, radius * 0.2, PAPER.glove)

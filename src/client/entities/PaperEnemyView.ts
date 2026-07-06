@@ -13,6 +13,59 @@ import { DEFAULT_LOOK, ENEMY_LOOKS, type EnemyLook } from './enemyLooks';
 
 const RIM = { strokeWidth: 2.5, strokeColor: PAPER.rim } as const;
 
+type EnemyRigAssets = {
+  head: string;
+  torso: string;
+  armFront: string;
+  armBack: string;
+  legFront: string;
+  legBack: string;
+  weapon: string;
+  shield?: string;
+};
+
+const ENEMY_RIG_ASSETS: Record<string, EnemyRigAssets> = {
+  'road-soldier': {
+    head: 'road_soldier_head',
+    torso: 'road_soldier_torso',
+    armFront: 'road_soldier_arm_front',
+    armBack: 'road_soldier_arm_back',
+    legFront: 'road_soldier_leg_front',
+    legBack: 'road_soldier_leg_back',
+    weapon: 'road_soldier_weapon',
+    shield: 'road_soldier_shield',
+  },
+  'shield-bearer': {
+    head: 'road_soldier_head',
+    torso: 'road_soldier_torso',
+    armFront: 'road_soldier_arm_front',
+    armBack: 'road_soldier_arm_back',
+    legFront: 'road_soldier_leg_front',
+    legBack: 'road_soldier_leg_back',
+    weapon: 'road_soldier_weapon',
+    shield: 'road_soldier_shield',
+  },
+  duelist: {
+    head: 'fallen_rival_head',
+    torso: 'fallen_rival_torso',
+    armFront: 'fallen_rival_arm_front',
+    armBack: 'fallen_rival_arm_back',
+    legFront: 'fallen_rival_leg_front',
+    legBack: 'fallen_rival_leg_back',
+    weapon: 'fallen_rival_weapon_frost_spear',
+    shield: 'fallen_rival_shield',
+  },
+  gatekeeper: {
+    head: 'warden_king_head',
+    torso: 'warden_king_torso',
+    armFront: 'warden_king_arm_front',
+    armBack: 'warden_king_arm_back',
+    legFront: 'warden_king_leg_front',
+    legBack: 'warden_king_leg_back',
+    weapon: 'warden_king_weapon_hammer',
+  },
+};
+
 /**
  * Silhouette enemy against the dusk: near-black paper-theater figure with
  * glowing eyes and weapon accents. Built from an EnemyDefinition (combat
@@ -28,16 +81,18 @@ export class PaperEnemyView {
   private readonly torso: Phaser.GameObjects.Container;
   private shieldArm: Phaser.GameObjects.Container | null = null;
   private readonly swordArm: Phaser.GameObjects.Container;
-  private readonly blade: Phaser.GameObjects.Graphics;
   private readonly bladeGlow: Phaser.GameObjects.Graphics;
   private readonly hand: Phaser.GameObjects.Arc;
-  private readonly eyes: Phaser.GameObjects.GameObject[] = [];
+  private readonly eyes: Phaser.GameObjects.Arc[] = [];
 
   private readonly headFlash: Phaser.GameObjects.Arc;
   private readonly torsoFlash: Phaser.GameObjects.Graphics;
   private readonly torsoRage: Phaser.GameObjects.Graphics;
   private readonly legFlashes: Phaser.GameObjects.Graphics[] = [];
-  private shieldFlash: Phaser.GameObjects.Graphics | Phaser.GameObjects.Arc | null = null;
+  private shieldFlash:
+    | Phaser.GameObjects.Graphics
+    | Phaser.GameObjects.Arc
+    | null = null;
 
   private readonly headBase: { x: number; y: number };
   private readonly torsoBase: { x: number; y: number };
@@ -45,6 +100,7 @@ export class PaperEnemyView {
   private readonly shieldArmBase: { x: number; y: number };
   private readonly legsCenterY: number;
   private readonly baseX: number;
+  private readonly weaponTipLocal: { x: number; y: number };
 
   private actionTweens: Phaser.Tweens.Tween[] = [];
   private cueRing: Phaser.GameObjects.Arc | null = null;
@@ -59,6 +115,7 @@ export class PaperEnemyView {
     private readonly def: EnemyDefinition
   ) {
     const look = ENEMY_LOOKS[def.id] ?? DEFAULT_LOOK;
+    const rigAssets = ENEMY_RIG_ASSETS[def.id] ?? null;
     this.look = look;
     this.baseX = x;
     this.container = scene.add.container(x, y);
@@ -81,17 +138,37 @@ export class PaperEnemyView {
     // Warm backglow so the silhouette reads against the dark road.
     const totalHeight = legsHeight + torsoHalfH * 2 + headRadius * 2;
     const backGlow = scene.add
-      .ellipse(0, -totalHeight * 0.45, torsoHalfW * 5.2, totalHeight * 1.25, PAPER.ember, 0.13)
+      .ellipse(
+        0,
+        -totalHeight * 0.45,
+        torsoHalfW * 5.2,
+        totalHeight * 1.25,
+        PAPER.ember,
+        0.13
+      )
       .setBlendMode(Phaser.BlendModes.ADD);
 
     // Pooled shadow on the road.
-    const groundShadow = scene.add.ellipse(0, 6, torsoHalfW * 3.2, 20, 0x000000, 0.4);
+    const groundShadow = scene.add.ellipse(
+      0,
+      6,
+      torsoHalfW * 3.2,
+      20,
+      0x000000,
+      0.4
+    );
 
     // Legs.
     const legWidth = Math.max(22, torsoHalfW * 0.44);
     const legParts: Phaser.GameObjects.GameObject[] = [];
     for (const side of [-1, 1]) {
-      const leg = paperRect(scene, legWidth, legsHeight, look.armor, { radius: 8, ...RIM });
+      const legKey = side < 0 ? rigAssets?.legBack : rigAssets?.legFront;
+      const leg =
+        this.assetImage(legKey, legsHeight * 1.32) ??
+        paperRect(scene, legWidth, legsHeight, look.armor, {
+          radius: 8,
+          ...RIM,
+        });
       leg.setPosition(side * legWidth * 0.92, this.legsCenterY);
       const flash = overlayRect(scene, legWidth, legsHeight, PAPER.flash, 8);
       flash.setPosition(leg.x, leg.y);
@@ -101,19 +178,50 @@ export class PaperEnemyView {
 
     // Torso.
     this.torso = scene.add.container(this.torsoBase.x, this.torsoBase.y);
-    const torsoBody = paperRect(scene, torsoHalfW * 2, torsoHalfH * 2, look.body, {
-      radius: 16,
-      ...RIM,
-    });
-    const mantle = paperRect(scene, torsoHalfW * 2 - 4, torsoHalfH * 0.6, look.armor, {
-      radius: 12,
-      strokeWidth: 0,
-    });
-    mantle.setY(-torsoHalfH * 0.62);
-    this.torsoFlash = overlayRect(scene, torsoHalfW * 2, torsoHalfH * 2, PAPER.flash, 16);
-    this.torsoRage = overlayRect(scene, torsoHalfW * 2, torsoHalfH * 2, PAPER.danger, 16);
+    const torsoArt = this.assetImage(rigAssets?.torso, torsoHalfH * 2.24);
+    const torsoParts: Phaser.GameObjects.GameObject[] = [];
+    if (torsoArt) {
+      torsoParts.push(torsoArt);
+    } else {
+      const torsoBody = paperRect(
+        scene,
+        torsoHalfW * 2,
+        torsoHalfH * 2,
+        look.body,
+        {
+          radius: 16,
+          ...RIM,
+        }
+      );
+      const mantle = paperRect(
+        scene,
+        torsoHalfW * 2 - 4,
+        torsoHalfH * 0.6,
+        look.armor,
+        {
+          radius: 12,
+          strokeWidth: 0,
+        }
+      );
+      mantle.setY(-torsoHalfH * 0.62);
+      torsoParts.push(torsoBody, mantle);
+    }
+    this.torsoFlash = overlayRect(
+      scene,
+      torsoHalfW * 2,
+      torsoHalfH * 2,
+      PAPER.flash,
+      16
+    );
+    this.torsoRage = overlayRect(
+      scene,
+      torsoHalfW * 2,
+      torsoHalfH * 2,
+      PAPER.danger,
+      16
+    );
     this.torsoRage.setBlendMode(Phaser.BlendModes.ADD);
-    this.torso.add([torsoBody, mantle, this.torsoFlash, this.torsoRage]);
+    this.torso.add([...torsoParts, this.torsoFlash, this.torsoRage]);
 
     // Breathing.
     scene.tweens.add({
@@ -126,58 +234,154 @@ export class PaperEnemyView {
     });
 
     // Sword arm.
-    this.swordArm = scene.add.container(this.swordArmBase.x, this.swordArmBase.y);
-    const arm = paperRect(scene, 22, 48, look.body, { radius: 10, ...RIM });
+    this.swordArm = scene.add.container(
+      this.swordArmBase.x,
+      this.swordArmBase.y
+    );
+    const arm =
+      this.assetImage(rigAssets?.armFront, 64)?.setPosition(0, 10) ??
+      paperRect(scene, 22, 48, look.body, { radius: 10, ...RIM });
     arm.setY(10);
-    this.hand = scene.add.circle(6, 30, 12, look.body).setStrokeStyle(2, PAPER.rim, 0.5);
+    this.hand = scene.add
+      .circle(6, 30, 12, look.body)
+      .setStrokeStyle(2, PAPER.rim, 0.5);
     const bladeWidth = look.weapon === 'rapier' ? 8 : 14;
-    this.blade = paperRect(scene, bladeWidth, look.bladeLength, PAPER.blade, {
-      radius: { tl: bladeWidth / 2, tr: bladeWidth / 2, bl: 2, br: 2 },
-      strokeWidth: 2,
-      strokeColor: PAPER.rim,
-    });
-    this.blade.setPosition(8, -look.bladeLength / 2 - 4);
-    // Glint line down the edge.
-    const glint = paperRect(scene, 2.5, look.bladeLength - 14, PAPER.bladeGlint, {
-      radius: 1,
-      strokeWidth: 0,
-      fillAlpha: 0.55,
-    });
-    glint.setPosition(8 + bladeWidth / 4, -look.bladeLength / 2 - 4);
+    const weaponArt = this.assetImage(rigAssets?.weapon, bladeWidth * 5.5);
+    let weapon: Phaser.GameObjects.GameObject;
+    let glint: Phaser.GameObjects.Graphics | null = null;
+    if (weaponArt) {
+      weaponArt.setOrigin(0.12, 0.5);
+      weaponArt.setScale(look.bladeLength / weaponArt.width);
+      weaponArt.setPosition(8, 0);
+      weaponArt.setAngle(-90);
+      weapon = weaponArt;
+    } else {
+      const blade = paperRect(
+        scene,
+        bladeWidth,
+        look.bladeLength,
+        PAPER.blade,
+        {
+          radius: { tl: bladeWidth / 2, tr: bladeWidth / 2, bl: 2, br: 2 },
+          strokeWidth: 2,
+          strokeColor: PAPER.rim,
+        }
+      );
+      blade.setPosition(8, -look.bladeLength / 2 - 4);
+      weapon = blade;
+      // Glint line down the edge.
+      glint = paperRect(scene, 2.5, look.bladeLength - 14, PAPER.bladeGlint, {
+        radius: 1,
+        strokeWidth: 0,
+        fillAlpha: 0.55,
+      });
+      glint.setPosition(8 + bladeWidth / 4, -look.bladeLength / 2 - 4);
+    }
+    this.weaponTipLocal = { x: 8, y: -look.bladeLength - 6 };
     // Telegraph glow overlay.
-    this.bladeGlow = overlayRect(scene, bladeWidth + 10, look.bladeLength + 10, PAPER.counterCue, 6);
+    this.bladeGlow = overlayRect(
+      scene,
+      bladeWidth + 10,
+      look.bladeLength + 10,
+      PAPER.counterCue,
+      6
+    );
     this.bladeGlow.setPosition(8, -look.bladeLength / 2 - 4);
     this.bladeGlow.setBlendMode(Phaser.BlendModes.ADD);
-    const guard = paperRect(scene, look.weapon === 'rapier' ? 22 : 32, 8, look.armor, {
-      radius: 4,
-      strokeWidth: 0,
-    });
+    const guard = paperRect(
+      scene,
+      look.weapon === 'rapier' ? 22 : 32,
+      8,
+      look.armor,
+      {
+        radius: 4,
+        strokeWidth: 0,
+      }
+    );
     guard.setPosition(8, -2);
-    this.swordArm.add([arm, this.hand, this.blade, glint, this.bladeGlow, guard]);
+    const swordParts: Phaser.GameObjects.GameObject[] = [arm, weapon];
+    if (glint) swordParts.push(glint);
+    if (!weaponArt) swordParts.push(guard);
+    swordParts.push(this.hand, this.bladeGlow);
+    this.swordArm.add(swordParts);
 
     // Head: silhouette skull with glowing eyes and a helmet profile.
     this.head = scene.add.container(this.headBase.x, this.headBase.y);
-    this.headFlash = scene.add.circle(0, 0, headRadius, PAPER.flash).setAlpha(0);
-    const skull = scene.add.circle(0, 0, headRadius, look.body).setStrokeStyle(2, PAPER.rim, 0.45);
-    this.head.add([skull]);
-    this.buildHelmet(headRadius);
+    this.headFlash = scene.add
+      .circle(0, 0, headRadius, PAPER.flash)
+      .setAlpha(0);
+    const headArt = this.assetImage(rigAssets?.head, headRadius * 2.36);
+    if (headArt) {
+      this.head.add(headArt);
+    } else {
+      const skull = scene.add
+        .circle(0, 0, headRadius, look.body)
+        .setStrokeStyle(2, PAPER.rim, 0.45);
+      this.head.add([skull]);
+      this.buildHelmet(headRadius);
+    }
     this.buildEyes(headRadius);
     this.head.add(this.headFlash);
 
     // Shield arm — added LAST so a raised guard renders in front of the body.
     if (look.shield) {
-      const shieldArm = scene.add.container(this.shieldArmBase.x, this.shieldArmBase.y);
+      const shieldArm = scene.add.container(
+        this.shieldArmBase.x,
+        this.shieldArmBase.y
+      );
       const s = look.shield;
-      if (s.shape === 'round') {
-        const plate = scene.add.circle(0, 0, s.radius, s.color).setStrokeStyle(2.5, PAPER.rim, 0.6);
-        const boss = scene.add.circle(0, 0, s.radius * 0.2, look.armor).setStrokeStyle(2, PAPER.rim, 0.4);
+      const armBack = this.assetImage(rigAssets?.armBack, 68);
+      if (armBack) {
+        armBack.setPosition(2, 16);
+        shieldArm.add(armBack);
+      }
+      const shieldHeight =
+        s.shape === 'round' ? s.radius * 2.25 : s.height * 1.05;
+      const shieldArt = this.assetImage(rigAssets?.shield, shieldHeight);
+      if (shieldArt) {
+        shieldArm.add(shieldArt);
+        if (s.shape === 'round') {
+          const flash = scene.add
+            .circle(0, 0, s.radius, PAPER.flash)
+            .setAlpha(0);
+          this.shieldFlash = flash;
+          shieldArm.add(flash);
+        } else {
+          this.shieldFlash = overlayRect(
+            scene,
+            s.width,
+            s.height,
+            PAPER.flash,
+            14
+          );
+          shieldArm.add(this.shieldFlash);
+        }
+      } else if (s.shape === 'round') {
+        const plate = scene.add
+          .circle(0, 0, s.radius, s.color)
+          .setStrokeStyle(2.5, PAPER.rim, 0.6);
+        const boss = scene.add
+          .circle(0, 0, s.radius * 0.2, look.armor)
+          .setStrokeStyle(2, PAPER.rim, 0.4);
         const flash = scene.add.circle(0, 0, s.radius, PAPER.flash).setAlpha(0);
         this.shieldFlash = flash;
         shieldArm.add([plate, boss, flash]);
       } else {
-        const plate = paperRect(scene, s.width, s.height, s.color, { radius: 14, ...RIM });
-        const ridge = paperRect(scene, 4, s.height - 22, look.armor, { radius: 2, strokeWidth: 0 });
-        this.shieldFlash = overlayRect(scene, s.width, s.height, PAPER.flash, 14);
+        const plate = paperRect(scene, s.width, s.height, s.color, {
+          radius: 14,
+          ...RIM,
+        });
+        const ridge = paperRect(scene, 4, s.height - 22, look.armor, {
+          radius: 2,
+          strokeWidth: 0,
+        });
+        this.shieldFlash = overlayRect(
+          scene,
+          s.width,
+          s.height,
+          PAPER.flash,
+          14
+        );
         shieldArm.add([plate, ridge, this.shieldFlash]);
       }
       this.shieldArm = shieldArm;
@@ -203,6 +407,16 @@ export class PaperEnemyView {
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
+  }
+
+  private assetImage(
+    key: string | undefined,
+    targetHeight: number
+  ): Phaser.GameObjects.Image | null {
+    if (!key || !this.scene.textures.exists(key)) return null;
+    const image = this.scene.add.image(0, 0, key);
+    if (image.height > 0) image.setScale(targetHeight / image.height);
+    return image;
   }
 
   private buildHelmet(r: number): void {
@@ -252,7 +466,7 @@ export class PaperEnemyView {
 
   private setEyesDimmed(dimmed: boolean): void {
     for (const eye of this.eyes) {
-      (eye as Phaser.GameObjects.Arc).setAlpha(dimmed ? 0.15 : 1);
+      eye.setAlpha(dimmed ? 0.15 : 1);
     }
   }
 
@@ -322,18 +536,26 @@ export class PaperEnemyView {
 
   private handWorldPosition(): { x: number; y: number } {
     const out = new Phaser.Math.Vector2();
-    this.swordArm.getWorldTransformMatrix().transformPoint(this.hand.x, this.hand.y, out);
+    this.swordArm
+      .getWorldTransformMatrix()
+      .transformPoint(this.hand.x, this.hand.y, out);
     return { x: out.x, y: out.y };
   }
 
   bladeWorldPosition(): { x: number; y: number } {
     const tip = new Phaser.Math.Vector2();
-    this.swordArm.getWorldTransformMatrix().transformPoint(this.blade.x, this.blade.y - 40, tip);
+    this.swordArm
+      .getWorldTransformMatrix()
+      .transformPoint(this.weaponTipLocal.x, this.weaponTipLocal.y, tip);
     return { x: tip.x, y: tip.y };
   }
 
   /** Wind-up, glowing blade, counter-window cue, then the swing itself. */
-  playTelegraph(telegraphMs: number, counterWindowMs: number, style: AttackStyle): void {
+  playTelegraph(
+    telegraphMs: number,
+    counterWindowMs: number,
+    style: AttackStyle
+  ): void {
     this.cancelActionTweens();
     const swingMs = Math.min(140, telegraphMs * 0.2);
     const windupMs = telegraphMs - swingMs;
@@ -403,13 +625,18 @@ export class PaperEnemyView {
     }
 
     // Counter-window cue: a bright expanding ring at the weapon.
-    this.scene.time.delayedCall(Math.max(0, telegraphMs - counterWindowMs), () => {
-      if (this.dead || !this.isMidTelegraph()) return;
-      this.showCounterCue();
-    });
+    this.scene.time.delayedCall(
+      Math.max(0, telegraphMs - counterWindowMs),
+      () => {
+        if (this.dead || !this.isMidTelegraph()) return;
+        this.showCounterCue();
+      }
+    );
   }
 
-  private glowPulse(target: Phaser.GameObjects.Graphics | Phaser.GameObjects.Arc): void {
+  private glowPulse(
+    target: Phaser.GameObjects.Graphics | Phaser.GameObjects.Arc
+  ): void {
     this.track(
       this.scene.tweens.add({
         targets: target,
@@ -429,7 +656,9 @@ export class PaperEnemyView {
   private showCounterCue(): void {
     const tip = this.bladeWorldPosition();
     this.cueRing?.destroy();
-    const ring = this.scene.add.circle(tip.x, tip.y, 14).setStrokeStyle(6, PAPER.counterCue);
+    const ring = this.scene.add
+      .circle(tip.x, tip.y, 14)
+      .setStrokeStyle(6, PAPER.counterCue);
     ring.setFillStyle(0, 0);
     ring.setBlendMode(Phaser.BlendModes.ADD);
     this.cueRing = ring;
@@ -449,7 +678,10 @@ export class PaperEnemyView {
   showCounterStance(totalMs: number): void {
     this.hideCounterStance();
     const tip = this.bladeWorldPosition();
-    const ring = this.scene.add.circle(tip.x, tip.y, 30).setStrokeStyle(6, PAPER.guard).setDepth(56);
+    const ring = this.scene.add
+      .circle(tip.x, tip.y, 30)
+      .setStrokeStyle(6, PAPER.guard)
+      .setDepth(56);
     ring.setFillStyle(0, 0);
     ring.setBlendMode(Phaser.BlendModes.ADD);
     this.stanceRing = ring;
@@ -515,7 +747,8 @@ export class PaperEnemyView {
   playBlock(stance: BlockStanceDefinition): void {
     this.cancelActionTweens();
     const guardTarget = this.shieldArm ?? this.swordArm;
-    const targetY = stance.id === 'high' ? this.headBase.y + 8 : this.torsoBase.y - 8;
+    const targetY =
+      stance.id === 'high' ? this.headBase.y + 8 : this.torsoBase.y - 8;
     this.track(
       this.scene.tweens.add({
         targets: guardTarget,
@@ -547,7 +780,11 @@ export class PaperEnemyView {
     );
   }
 
-  playDodge(direction: DodgeDirection, durationMs: number, distance: number): void {
+  playDodge(
+    direction: DodgeDirection,
+    durationMs: number,
+    distance: number
+  ): void {
     this.track(
       this.scene.tweens.add({
         targets: this.container,

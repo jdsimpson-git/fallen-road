@@ -8,9 +8,8 @@ export type EnemyAttackDefinition = {
   style: AttackStyle;
   /** Wind-up duration. The counter window is the final portion of this. */
   telegraphMs: number;
+  /** Also drives the player's stamina cost when this attack is blocked. */
   damage: number;
-  /** Guard damage dealt to a blocking player. */
-  guardDamageToPlayer: number;
   /** Recovery after the swing, during which the enemy is exposed. */
   recoverMs: number;
   /** Guard damage the enemy suffers when this attack is perfect-countered. */
@@ -162,7 +161,6 @@ export const ROAD_SOLDIER: EnemyDefinition = {
       style: 'slash',
       telegraphMs: 950,
       damage: 12,
-      guardDamageToPlayer: 16,
       recoverMs: 900,
       counterGuardDamage: 22,
       weight: 100,
@@ -224,7 +222,6 @@ export const SHIELD_BEARER: EnemyDefinition = {
       style: 'slash',
       telegraphMs: 1000,
       damage: 14,
-      guardDamageToPlayer: 14,
       recoverMs: 950,
       counterGuardDamage: 24,
       weight: 55,
@@ -234,7 +231,6 @@ export const SHIELD_BEARER: EnemyDefinition = {
       style: 'bash',
       telegraphMs: 820,
       damage: 9,
-      guardDamageToPlayer: 32,
       recoverMs: 1050,
       counterGuardDamage: 30,
       weight: 45,
@@ -312,7 +308,6 @@ export const DUELIST: EnemyDefinition = {
       style: 'thrust',
       telegraphMs: 720,
       damage: 11,
-      guardDamageToPlayer: 12,
       recoverMs: 650,
       counterGuardDamage: 18,
       weight: 100,
@@ -322,7 +317,6 @@ export const DUELIST: EnemyDefinition = {
       style: 'thrust',
       telegraphMs: 380,
       damage: 16,
-      guardDamageToPlayer: 18,
       recoverMs: 620,
       counterGuardDamage: 16,
       weight: 0,
@@ -380,15 +374,145 @@ export const DUELIST: EnemyDefinition = {
   ],
 };
 
+export const GATEKEEPER: EnemyDefinition = {
+  id: 'gatekeeper',
+  name: 'The Gatekeeper',
+  tagline: 'The castle gates have a warden. The road ends here.',
+  tier: 'boss',
+  maxHealth: 240,
+  maxGuard: 130,
+  blockDamageReduction: 0.85,
+  guardBreakDurationMs: 3000,
+  guardBrokenDamageTakenMultiplier: 1.7,
+  staggerDurationMs: 1000,
+  guardRegenPerSecond: 16,
+  guardRegenDelayMs: 900,
+  attacks: [
+    {
+      id: 'gate-cleave',
+      style: 'slash',
+      telegraphMs: 1150,
+      damage: 22,
+      recoverMs: 1000,
+      counterGuardDamage: 34,
+      weight: 45,
+    },
+    {
+      id: 'gate-slam',
+      style: 'bash',
+      telegraphMs: 900,
+      damage: 16,
+      recoverMs: 1100,
+      counterGuardDamage: 40,
+      weight: 30,
+    },
+    {
+      id: 'backhand',
+      style: 'thrust',
+      telegraphMs: 540,
+      damage: 10,
+      recoverMs: 700,
+      counterGuardDamage: 18,
+      weight: 25,
+    },
+    {
+      id: 'warden-riposte',
+      style: 'thrust',
+      telegraphMs: 400,
+      damage: 18,
+      recoverMs: 700,
+      counterGuardDamage: 20,
+      weight: 0,
+    },
+  ],
+  blockStances: [
+    {
+      id: 'center',
+      weight: 55,
+      blockedZones: ['torso'],
+      blockedDirections: ['left', 'right'],
+      adaptToSignal: 'torsoRatio',
+    },
+    {
+      id: 'high',
+      weight: 45,
+      blockedZones: ['head'],
+      blockedDirections: ['down', 'downLeft', 'downRight'],
+      adaptToSignal: 'headRatio',
+    },
+  ],
+  counterStance: {
+    startupMs: 300,
+    activeMs: 600,
+    riposteAttackId: 'warden-riposte',
+    cooldownMs: 6000,
+  },
+  phases: [
+    {
+      id: 'gate-fury',
+      healthFractionBelow: 0.55,
+      telegraphSpeedMultiplier: 0.85,
+      recoverMultiplier: 0.9,
+      weightOverrides: { attack: 55, block: 25, counter: 12 },
+    },
+    {
+      id: 'last-stand',
+      healthFractionBelow: 0.22,
+      telegraphSpeedMultiplier: 0.72,
+      recoverMultiplier: 0.8,
+      weightOverrides: { attack: 68, block: 12, counter: 15, wait: 5 },
+    },
+  ],
+  behavior: {
+    decisionIntervalMs: [550, 1000],
+    weights: { attack: 45, block: 30, dodge: 0, counter: 10, wait: 15 },
+    blockDurationMs: 1300,
+    dodgeDurationMs: 0,
+    dodgeDistance: 0,
+    defensiveCooldownMs: 1000,
+    headBob: { amplitudeX: 16, amplitudeY: 8, periodMs: 2600 },
+  },
+  adaptation: {
+    cap: 2.0,
+    blockingBoostsAttack: 0.7,
+    spamBoostsDodge: 0,
+    spamBoostsCounter: 0.7,
+    horizontalBoostsDodge: 0,
+    zoneFocusBoostsBlock: 0.8,
+  },
+  hitZones: [
+    { id: 'head', type: 'circle', radius: 36, attachTo: 'head' },
+    {
+      id: 'torso',
+      type: 'rect',
+      halfWidth: 78,
+      halfHeight: 100,
+      attachTo: 'torso',
+    },
+    { id: 'weaponHand', type: 'circle', radius: 26, attachTo: 'weaponHand' },
+    {
+      id: 'legs',
+      type: 'rect',
+      halfWidth: 56,
+      halfHeight: 40,
+      attachTo: 'legs',
+    },
+  ],
+};
+
 export const ENEMIES: Record<string, EnemyDefinition> = {
   [ROAD_SOLDIER.id]: ROAD_SOLDIER,
   [SHIELD_BEARER.id]: SHIELD_BEARER,
   [DUELIST.id]: DUELIST,
+  [GATEKEEPER.id]: GATEKEEPER,
 };
 
-/** Encounter order used by the Phase 2 gauntlet. */
+/** Encounter order cycled on the road before the castle gates. */
 export const GAUNTLET_ORDER: readonly string[] = [
   ROAD_SOLDIER.id,
   SHIELD_BEARER.id,
   DUELIST.id,
 ];
+
+/** Road fights survived before the Gatekeeper bars the way. */
+export const ROAD_FIGHTS_BEFORE_BOSS = 6;

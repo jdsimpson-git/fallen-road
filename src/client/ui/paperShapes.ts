@@ -39,7 +39,12 @@ export const tornPaperRect = (
   width: number,
   height: number,
   color: number,
-  options: { strokeWidth?: number; strokeColor?: number; fillAlpha?: number; jitter?: number } = {}
+  options: {
+    strokeWidth?: number;
+    strokeColor?: number;
+    fillAlpha?: number;
+    jitter?: number;
+  } = {}
 ): Phaser.GameObjects.Graphics => {
   const jitter = options.jitter ?? Math.min(5, Math.min(width, height) * 0.08);
   const hw = width / 2;
@@ -48,10 +53,14 @@ export const tornPaperRect = (
   const points: { x: number; y: number }[] = [];
   const steps = Math.max(3, Math.round(width / 46));
   const stepsV = Math.max(2, Math.round(height / 40));
-  for (let i = 0; i <= steps; i++) points.push({ x: -hw + (width * i) / steps, y: -hh + j() });
-  for (let i = 1; i <= stepsV; i++) points.push({ x: hw + j(), y: -hh + (height * i) / stepsV });
-  for (let i = 1; i <= steps; i++) points.push({ x: hw - (width * i) / steps, y: hh + j() });
-  for (let i = 1; i < stepsV; i++) points.push({ x: -hw + j(), y: hh - (height * i) / stepsV });
+  for (let i = 0; i <= steps; i++)
+    points.push({ x: -hw + (width * i) / steps, y: -hh + j() });
+  for (let i = 1; i <= stepsV; i++)
+    points.push({ x: hw + j(), y: -hh + (height * i) / stepsV });
+  for (let i = 1; i <= steps; i++)
+    points.push({ x: hw - (width * i) / steps, y: hh + j() });
+  for (let i = 1; i < stepsV; i++)
+    points.push({ x: -hw + j(), y: hh - (height * i) / stepsV });
 
   const g = scene.add.graphics();
   g.fillStyle(color, options.fillAlpha ?? 1);
@@ -94,7 +103,12 @@ export const flashOverlay = (
 ): void => {
   scene.tweens.killTweensOf(target);
   target.setAlpha(peakAlpha);
-  scene.tweens.add({ targets: target, alpha: 0, duration: durationMs, ease: 'Quad.easeOut' });
+  scene.tweens.add({
+    targets: target,
+    alpha: 0,
+    duration: durationMs,
+    ease: 'Quad.easeOut',
+  });
 };
 
 /** Cartoon eye: white with a big pupil. Returns the parts to add. */
@@ -107,7 +121,12 @@ export const paperEye = (
   const white = scene.add
     .ellipse(x, y, 15 * scale, 19 * scale, 0xffffff)
     .setStrokeStyle(2.5, PAPER.ink);
-  const pupil = scene.add.circle(x + 1.5 * scale, y + 1 * scale, 4 * scale, PAPER.ink);
+  const pupil = scene.add.circle(
+    x + 1.5 * scale,
+    y + 1 * scale,
+    4 * scale,
+    PAPER.ink
+  );
   return [white, pupil];
 };
 
@@ -119,7 +138,12 @@ export const puppetJoint = (
   radius = 5
 ): Phaser.GameObjects.GameObject[] => [
   scene.add.circle(x, y, radius, PAPER.ink),
-  scene.add.circle(x - radius * 0.25, y - radius * 0.25, radius * 0.45, 0xcbbfa4),
+  scene.add.circle(
+    x - radius * 0.25,
+    y - radius * 0.25,
+    radius * 0.45,
+    0xcbbfa4
+  ),
 ];
 
 /** Small ink heart icon, centered on (0, 0). */
@@ -213,10 +237,16 @@ export const inkSpark = (
  * Textures are generated once in the Preloader.
  */
 export const addPaperOverlays = (scene: Phaser.Scene): void => {
-  if (scene.textures.exists('paper-grain')) {
-    scene.add.tileSprite(640, 360, 1280, 720, 'paper-grain').setAlpha(0.35).setDepth(150);
+  if (scene.textures.exists('grain_tile')) {
+    scene.add
+      .tileSprite(640, 360, 1280, 720, 'grain_tile')
+      .setAlpha(0.35)
+      .setDepth(150);
   }
-  if (scene.textures.exists('paper-vignette')) {
-    scene.add.image(640, 360, 'paper-vignette').setDisplaySize(1280, 720).setDepth(151);
+  if (scene.textures.exists('vignette_tile')) {
+    scene.add
+      .image(640, 360, 'vignette_tile')
+      .setDisplaySize(1280, 720)
+      .setDepth(151);
   }
 };

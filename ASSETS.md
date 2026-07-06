@@ -54,11 +54,13 @@ yours to organize.
 Enemy art. Each foe is an animated rig (independent head/torso/arms/legs with
 hit zones), so it needs **separate body-part PNGs**, not one flat image:
 
-- Per archetype (`road-soldier`, `shield-bearer`, `duelist`): torso, head,
-  weapon arm + weapon, off arm (shield for the Shield Bearer), legs.
-- Roughly 2× final size (torso ≈ 300×400) so parts stay crisp when zoomed.
+- Per archetype (`road-soldier`, `shield-bearer`, `duelist`, and the
+  `gatekeeper` boss — bigger, tower shield, gold eyes): torso, head,
+  weapon arm + weapon, off arm (shield where the foe carries one), legs.
+- Roughly 2× final size (torso ≈ 300×400; gatekeeper ≈ 1.3× the others) so
+  parts stay crisp when zoomed.
 - Same silhouette language: dark bodies, per-archetype glowing eye color
-  (soldier amber, bearer blue, duelist red).
+  (soldier amber, bearer blue, duelist red, gatekeeper gold).
 
 Also useful, small: HUD icons 64×64 (heart, shield, spark, dodge chevrons),
 a slash-arc streak texture (~512×128, white on transparent), an ember dot.

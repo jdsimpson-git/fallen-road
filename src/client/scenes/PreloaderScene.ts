@@ -7,9 +7,14 @@ type ManifestImage = { key: string; file: string };
  * described in ASSETS.md. Malformed or missing manifests yield no entries.
  */
 const manifestImages = (raw: unknown): ManifestImage[] => {
-  if (typeof raw !== 'object' || raw === null || !('images' in raw)) return [];
-  if (!Array.isArray(raw.images)) return [];
-  const entries: unknown[] = raw.images;
+  const entries = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'object' &&
+        raw !== null &&
+        'images' in raw &&
+        Array.isArray(raw.images)
+      ? raw.images
+      : [];
   const out: ManifestImage[] = [];
   for (const entry of entries) {
     if (
@@ -29,8 +34,8 @@ const manifestImages = (raw: unknown): ManifestImage[] => {
 /**
  * Loads any art listed in assets/manifest.json, then generates procedural
  * fallback textures for whatever wasn't supplied (dusk sky gradient, fog,
- * grain, vignette). Supplied art that reuses a procedural key — 'dusk-sky',
- * 'fog-band', 'paper-grain', 'paper-vignette' — replaces it automatically.
+ * grain, vignette). Supplied art that uses the ASSETS.md keys replaces the
+ * matching fallback automatically.
  */
 export class PreloaderScene extends Phaser.Scene {
   constructor() {
@@ -42,7 +47,9 @@ export class PreloaderScene extends Phaser.Scene {
   }
 
   create(): void {
-    for (const { key, file } of manifestImages(this.cache.json.get('asset-manifest'))) {
+    for (const { key, file } of manifestImages(
+      this.cache.json.get('asset-manifest')
+    )) {
       if (!this.textures.exists(key)) this.load.image(key, `assets/${file}`);
     }
     if (this.load.list.size > 0) {
@@ -64,10 +71,10 @@ export class PreloaderScene extends Phaser.Scene {
 
   /** Vertical twilight gradient: deep indigo down to a burning horizon. */
   private makeSkyTexture(): void {
-    if (this.textures.exists('dusk-sky')) return;
+    if (this.textures.exists('sky_painting')) return;
     const w = 16;
     const h = 512;
-    const canvas = this.textures.createCanvas('dusk-sky', w, h);
+    const canvas = this.textures.createCanvas('sky_painting', w, h);
     if (!canvas) return;
     const ctx = canvas.getContext();
     const gradient = ctx.createLinearGradient(0, 0, 0, h);
@@ -84,10 +91,10 @@ export class PreloaderScene extends Phaser.Scene {
 
   /** Soft horizontal fog band with faded top and bottom edges. */
   private makeFogTexture(): void {
-    if (this.textures.exists('fog-band')) return;
+    if (this.textures.exists('fog_band')) return;
     const w = 256;
     const h = 64;
-    const canvas = this.textures.createCanvas('fog-band', w, h);
+    const canvas = this.textures.createCanvas('fog_band', w, h);
     if (!canvas) return;
     const ctx = canvas.getContext();
     const gradient = ctx.createLinearGradient(0, 0, 0, h);
@@ -101,9 +108,9 @@ export class PreloaderScene extends Phaser.Scene {
 
   /** Tiled speckle noise that reads as film grain. */
   private makeGrainTexture(): void {
-    if (this.textures.exists('paper-grain')) return;
+    if (this.textures.exists('grain_tile')) return;
     const size = 256;
-    const canvas = this.textures.createCanvas('paper-grain', size, size);
+    const canvas = this.textures.createCanvas('grain_tile', size, size);
     if (!canvas) return;
     const ctx = canvas.getContext();
     for (let i = 0; i < 2600; i++) {
@@ -111,7 +118,9 @@ export class PreloaderScene extends Phaser.Scene {
       const y = Math.random() * size;
       const dark = Math.random() < 0.5;
       const alpha = 0.04 + Math.random() * 0.08;
-      ctx.fillStyle = dark ? `rgba(0, 0, 0, ${alpha})` : `rgba(232, 224, 216, ${alpha})`;
+      ctx.fillStyle = dark
+        ? `rgba(0, 0, 0, ${alpha})`
+        : `rgba(232, 224, 216, ${alpha})`;
       const s = Math.random() < 0.85 ? 1 : 2;
       ctx.fillRect(x, y, s, s);
     }
@@ -120,13 +129,20 @@ export class PreloaderScene extends Phaser.Scene {
 
   /** Soft radial darkening toward the screen edges. */
   private makeVignetteTexture(): void {
-    if (this.textures.exists('paper-vignette')) return;
+    if (this.textures.exists('vignette_tile')) return;
     const w = 320;
     const h = 180;
-    const canvas = this.textures.createCanvas('paper-vignette', w, h);
+    const canvas = this.textures.createCanvas('vignette_tile', w, h);
     if (!canvas) return;
     const ctx = canvas.getContext();
-    const gradient = ctx.createRadialGradient(w / 2, h / 2, h * 0.42, w / 2, h / 2, w * 0.62);
+    const gradient = ctx.createRadialGradient(
+      w / 2,
+      h / 2,
+      h * 0.42,
+      w / 2,
+      h / 2,
+      w * 0.62
+    );
     gradient.addColorStop(0, 'rgba(5, 3, 10, 0)');
     gradient.addColorStop(1, 'rgba(5, 3, 10, 0.55)');
     ctx.fillStyle = gradient;

@@ -3,7 +3,9 @@ import { PLAYER_BALANCE } from '../../shared/balance/player';
 import { SWORD } from '../../shared/balance/weapons';
 import {
   ENEMIES,
+  GATEKEEPER,
   GAUNTLET_ORDER,
+  ROAD_FIGHTS_BEFORE_BOSS,
   ROAD_SOLDIER,
   type EnemyAttackDefinition,
   type EnemyDefinition,
@@ -174,13 +176,7 @@ export class BattleScene extends Phaser.Scene {
     const inHitStop = time < this.hitStopUntil;
     this.tweens.timeScale = inHitStop ? 0.05 : 1;
 
-    if (this.mode !== 'over' && !inHitStop) {
-      this.playerGuard = regenGuard(this.playerGuard, time, delta, this.holdingBlock, {
-        regenPerSecond: PLAYER_BALANCE.guardRegenPerSecond,
-        regenDelayMs: PLAYER_BALANCE.guardRegenDelayMs,
-      });
-    }
-
+    // Player stamina does not regenerate — it refills only on a won duel.
     if (this.mode === 'fight' && this.brain && this.def && this.enemyView && !inHitStop) {
       this.brain.update(time, {
         healthFraction: this.enemyHealth / this.def.maxHealth,
@@ -218,8 +214,9 @@ export class BattleScene extends Phaser.Scene {
   // ------------------------------------------------------------------
 
   private spawnEnemy(): void {
+    const bossFight = this.encounterNumber > ROAD_FIGHTS_BEFORE_BOSS;
     const id = GAUNTLET_ORDER[(this.encounterNumber - 1) % GAUNTLET_ORDER.length]!;
-    const def = ENEMIES[id] ?? ROAD_SOLDIER;
+    const def = bossFight ? GATEKEEPER : (ENEMIES[id] ?? ROAD_SOLDIER);
     this.def = def;
     this.enemyHealth = def.maxHealth;
     this.enemyGuard = createGuardMeter(def.maxGuard);
@@ -253,10 +250,12 @@ export class BattleScene extends Phaser.Scene {
         onVulnerableEnd: () => this.onEnemyVulnerableEnd(),
         onPhaseChange: (phase) => {
           view.playPhaseChange();
-          this.hud.showMessage(
-            phase.id === 'enraged' ? 'THE DUELIST IS ENRAGED!' : 'THE FOE CHANGES STANCE!',
-            '#d94f3d'
-          );
+          const phaseMessages: Record<string, string> = {
+            enraged: 'THE DUELIST IS ENRAGED!',
+            'gate-fury': "THE GATEKEEPER'S FURY RISES!",
+            'last-stand': 'THE GATEKEEPER MAKES A LAST STAND!',
+          };
+          this.hud.showMessage(phaseMessages[phase.id] ?? 'THE FOE CHANGES STANCE!', '#d94f3d');
           this.cameras.main.shake(120, 0.005);
         },
       },
@@ -265,18 +264,26 @@ export class BattleScene extends Phaser.Scene {
     );
 
     this.hud.setEnemyActive(def.name);
-    this.hud.showMessage(`A ${def.name.toUpperCase()} BLOCKS THE ROAD`, '#d94f3d', 26);
+    if (bossFight) {
+      this.hud.showMessage('THE GATEKEEPER BARS THE GATES', '#ffd75e', 30);
+      this.cameras.main.shake(200, 0.006);
+    } else {
+      this.hud.showMessage(`A ${def.name.toUpperCase()} BLOCKS THE ROAD`, '#d94f3d', 26);
+    }
     this.mode = 'fight';
   }
 
   private onEnemyFelled(): void {
     if (!this.enemyView || this.mode !== 'fight') return;
+    const felled = this.def;
     const view = this.enemyView;
     this.mode = 'travel';
     this.stats.foesFelled += 1;
     this.encounterNumber += 1;
     this.playerBurst = gainBurst(this.playerBurst, 'kill', PLAYER_BALANCE.burstMax);
     this.playerHealth = Math.min(PLAYER_BALANCE.maxHealth, this.playerHealth + HEAL_PER_KILL);
+    // Winning the duel is the only thing that refills stamina.
+    this.playerGuard = createGuardMeter(PLAYER_BALANCE.maxGuard);
     this.brain?.notifyDied();
     this.hud.setEnemyActive(null);
 
@@ -291,12 +298,21 @@ export class BattleScene extends Phaser.Scene {
       }
     });
 
-    this.time.delayedCall(900, () => {
-      if (this.mode !== 'over') {
-        this.hud.showMessage('THE ROAD CONTINUES', '#ffb347', 28);
-      }
-    });
-    this.nextSpawnAt = this.time.now + TRAVEL_MS;
+    if (felled?.tier === 'boss') {
+      this.handleTriumph();
+    } else {
+      const gatesNext = this.encounterNumber > ROAD_FIGHTS_BEFORE_BOSS;
+      this.time.delayedCall(900, () => {
+        if (this.mode !== 'over') {
+          this.hud.showMessage(
+            gatesNext ? 'THE CASTLE GATES LOOM AHEAD' : 'THE ROAD CONTINUES',
+            '#ffb347',
+            28
+          );
+        }
+      });
+      this.nextSpawnAt = this.time.now + (gatesNext ? TRAVEL_MS + 1000 : TRAVEL_MS);
+    }
     void this.recordVictory();
   }
 
@@ -319,6 +335,11 @@ export class BattleScene extends Phaser.Scene {
 
     if (isGuardBroken(this.playerGuard, now)) {
       this.hud.showFloatingText(gesture.end.x, gesture.end.y, 'stunned', '#d94f3d');
+      return;
+    }
+    // The shield commits you: no swinging while it is raised.
+    if (this.holdingBlock) {
+      this.hud.showFloatingText(gesture.end.x, gesture.end.y, 'guarding', MUTED_TEXT);
       return;
     }
     if (now < this.nextAttackReadyAt) return;
@@ -527,9 +548,11 @@ export class BattleScene extends Phaser.Scene {
         this.playerBurst = gainBurst(this.playerBurst, 'normalBlock', PLAYER_BALANCE.burstMax);
         this.cameras.main.shake(70, 0.003);
         spawnPaperFragments(this, 300, 620, 4, PAPER.guard);
+        // Stamina cost scales with how hard the blocked attack hits.
+        const staminaCost = Math.round(attack.damage * PLAYER_BALANCE.blockGuardCostFactor);
         const result = applyGuardDamage(
           this.playerGuard,
-          attack.guardDamageToPlayer,
+          staminaCost,
           now,
           PLAYER_BALANCE.guardBreakDurationMs
         );
@@ -551,7 +574,17 @@ export class BattleScene extends Phaser.Scene {
     spawnPaperFragments(this, 300, 640, 14, PAPER.guard);
     this.cameras.main.shake(160, 0.008);
     this.time.delayedCall(PLAYER_BALANCE.guardBreakDurationMs, () => {
-      if (this.mode !== 'over') this.rig.restoreShield();
+      if (this.mode === 'over') return;
+      // No mid-duel regen, so recovery hands back a stamina floor (never
+      // downgrading a refill earned by a kill in the meantime).
+      const floor = Math.round(
+        this.playerGuard.max * PLAYER_BALANCE.guardRestoredAfterBreakFraction
+      );
+      this.playerGuard = {
+        ...this.playerGuard,
+        current: Math.max(this.playerGuard.current, floor),
+      };
+      this.rig.restoreShield();
     });
   }
 
@@ -577,6 +610,8 @@ export class BattleScene extends Phaser.Scene {
     if (!canActivateBurst(this.playerBurst, PLAYER_BALANCE.burstMax)) return;
     if (isGuardBroken(this.playerGuard, now)) return;
 
+    // Bursting is an all-out attack — the shield drops for it.
+    this.releaseShield();
     this.burstActive = true;
     this.playerBurst = 0;
     const burst = SWORD.burst;
@@ -634,7 +669,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------
-  // Death
+  // Run end: death or triumph
   // ------------------------------------------------------------------
 
   private handleDefeat(): void {
@@ -645,29 +680,42 @@ export class BattleScene extends Phaser.Scene {
     this.cameras.main.shake(220, 0.01);
     const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0).setDepth(85);
     this.tweens.add({ targets: overlay, fillAlpha: 0.55, duration: 700 });
-    this.time.delayedCall(900, () => this.showEndPanel());
+    this.time.delayedCall(900, () => this.showEndPanel(false));
   }
 
-  private showEndPanel(): void {
+  /** The Gatekeeper is down — the run is won at the castle gates. */
+  private handleTriumph(): void {
+    if (this.mode === 'over') return;
+    this.mode = 'over';
+    this.holdingBlock = false;
+    this.hud.showMessage('THE GATES OPEN', '#ffd75e', 46);
+    this.cameras.main.flash(300, 60, 50, 20);
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0).setDepth(85);
+    this.tweens.add({ targets: overlay, fillAlpha: 0.4, duration: 900 });
+    this.time.delayedCall(1300, () => this.showEndPanel(true));
+  }
+
+  private showEndPanel(victory: boolean): void {
     const durationSec = Math.round((this.time.now - this.runStartAt) / 1000);
     this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.3).setDepth(90).setInteractive();
 
     const panel = this.add
       .rectangle(640, 360, 560, 420, PAPER.plate, 0.96)
-      .setStrokeStyle(3, PAPER.rim)
+      .setStrokeStyle(3, victory ? PAPER.counterCue : PAPER.rim)
       .setDepth(91);
     panel.setInteractive();
     this.add
-      .text(640, 208, 'THE ROAD CLAIMS YOU', {
+      .text(640, 208, victory ? 'THE GATES OPEN' : 'THE ROAD CLAIMS YOU', {
         fontFamily: FONT,
         fontSize: '36px',
         fontStyle: 'bold',
-        color: '#d94f3d',
+        color: victory ? '#ffd75e' : '#d94f3d',
       })
       .setOrigin(0.5)
       .setDepth(92);
 
     const lines = [
+      victory ? 'The Gatekeeper has fallen. The road is yours.' : '',
       `Foes felled: ${this.stats.foesFelled}`,
       `Damage dealt: ${this.stats.damageDealt}`,
       `Damage taken: ${this.stats.damageTaken}`,
@@ -675,7 +723,7 @@ export class BattleScene extends Phaser.Scene {
       `Perfect counters: ${this.stats.perfectCounters}`,
       `Attacks evaded: ${this.stats.attacksEvaded}`,
       `The road held you for ${durationSec}s`,
-    ];
+    ].filter((line) => line !== '');
     this.add
       .text(640, 330, lines.join('\n'), {
         fontFamily: FONT,

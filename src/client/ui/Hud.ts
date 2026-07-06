@@ -1,6 +1,12 @@
 import * as Phaser from 'phaser';
 import { FONT, INK_TEXT, MUTED_TEXT, PAPER, PARCHMENT_TEXT } from './theme';
-import { inkDodgeGlyph, inkHeart, inkShieldGlyph, inkSpark, paperRect } from './paperShapes';
+import {
+  inkDodgeGlyph,
+  inkHeart,
+  inkShieldGlyph,
+  inkSpark,
+  paperRect,
+} from './paperShapes';
 
 export type HudCallbacks = {
   onShieldDown: () => void;
@@ -35,6 +41,21 @@ const GUARD_BUTTON = { x: 1002, y: 640, radius: 56 };
 const DODGE_BUTTON = { x: 278, y: 640, radius: 56 };
 const BURST_BUTTON = { x: 640, y: 668, width: 250, height: 56 };
 
+const addAssetIcon = (
+  scene: Phaser.Scene,
+  key: string,
+  x: number,
+  y: number,
+  size: number,
+  depth: number
+): Phaser.GameObjects.Image | null => {
+  if (!scene.textures.exists(key)) return null;
+  const icon = scene.add.image(x, y, key).setDepth(depth);
+  const largestSide = Math.max(icon.width, icon.height);
+  if (largestSide > 0) icon.setScale(size / largestSide);
+  return icon;
+};
+
 /** Dark dusk HUD: translucent panels, glowing accent bars. 1280x720. */
 export class Hud {
   private playerHealthBar: Bar;
@@ -63,9 +84,13 @@ export class Hud {
     // --- Player panel, top-left ---
     this.panel(190, 66, 350, 104);
     this.label(38, 24, 'YOU');
-    inkHeart(scene).setPosition(48, 60).setDepth(61);
+    if (!addAssetIcon(scene, 'ui_heart_full', 48, 60, 30, 61)) {
+      inkHeart(scene).setPosition(48, 60).setDepth(61);
+    }
     this.playerHealthBar = this.bar(66, 60, 280, 20, PAPER.health, true);
-    inkShieldGlyph(scene).setPosition(48, 89).setDepth(61);
+    if (!addAssetIcon(scene, 'ui_guard_icon', 48, 89, 28, 61)) {
+      inkShieldGlyph(scene).setPosition(48, 89).setDepth(61);
+    }
     this.playerGuardBar = this.bar(66, 89, 280, 12, PAPER.guard);
 
     // --- Enemy panel, top-center (hidden while traveling) ---
@@ -82,22 +107,69 @@ export class Hud {
       .setOrigin(0.5, 0)
       .setDepth(61);
     enemyPieces.push(this.enemyNameText);
-    enemyPieces.push(inkHeart(scene).setPosition(488, 62).setDepth(61));
-    this.enemyHealthBar = this.bar(506, 62, 290, 20, PAPER.health, true, enemyPieces);
-    enemyPieces.push(inkShieldGlyph(scene).setPosition(488, 91).setDepth(61));
-    this.enemyGuardBar = this.bar(506, 91, 290, 12, PAPER.guard, false, enemyPieces);
+    const enemyHeart =
+      addAssetIcon(scene, 'ui_heart_full', 488, 62, 30, 61) ??
+      inkHeart(scene).setPosition(488, 62).setDepth(61);
+    enemyPieces.push(enemyHeart);
+    this.enemyHealthBar = this.bar(
+      506,
+      62,
+      290,
+      20,
+      PAPER.health,
+      true,
+      enemyPieces
+    );
+    const enemyGuard =
+      addAssetIcon(scene, 'ui_guard_icon', 488, 91, 28, 61) ??
+      inkShieldGlyph(scene).setPosition(488, 91).setDepth(61);
+    enemyPieces.push(enemyGuard);
+    this.enemyGuardBar = this.bar(
+      506,
+      91,
+      290,
+      12,
+      PAPER.guard,
+      false,
+      enemyPieces
+    );
     this.enemyCard.add(enemyPieces);
     this.enemyCard.setVisible(false);
 
     // --- Guard button, bottom-right ---
     this.guardButton = scene.add
-      .circle(GUARD_BUTTON.x, GUARD_BUTTON.y, GUARD_BUTTON.radius, PAPER.panel, 0.8)
+      .circle(
+        GUARD_BUTTON.x,
+        GUARD_BUTTON.y,
+        GUARD_BUTTON.radius,
+        PAPER.panel,
+        0.8
+      )
       .setStrokeStyle(3, PAPER.guard, 0.8)
       .setDepth(60)
       .setInteractive({ useHandCursor: true });
-    inkShieldGlyph(scene, PAPER.guard, 1.7)
-      .setPosition(GUARD_BUTTON.x, GUARD_BUTTON.y - 12)
-      .setDepth(61);
+    addAssetIcon(
+      scene,
+      'ui_button_guard',
+      GUARD_BUTTON.x,
+      GUARD_BUTTON.y,
+      106,
+      60
+    );
+    if (
+      !addAssetIcon(
+        scene,
+        'ui_guard_icon',
+        GUARD_BUTTON.x,
+        GUARD_BUTTON.y - 12,
+        44,
+        61
+      )
+    ) {
+      inkShieldGlyph(scene, PAPER.guard, 1.7)
+        .setPosition(GUARD_BUTTON.x, GUARD_BUTTON.y - 12)
+        .setDepth(61);
+    }
     this.guardLabel = scene.add
       .text(GUARD_BUTTON.x, GUARD_BUTTON.y + 26, 'GUARD', {
         fontFamily: FONT,
@@ -121,10 +193,24 @@ export class Hud {
 
     // --- Dodge button, bottom-left (tap, cooldown ring while recharging) ---
     this.dodgeButton = scene.add
-      .circle(DODGE_BUTTON.x, DODGE_BUTTON.y, DODGE_BUTTON.radius, PAPER.panel, 0.8)
+      .circle(
+        DODGE_BUTTON.x,
+        DODGE_BUTTON.y,
+        DODGE_BUTTON.radius,
+        PAPER.panel,
+        0.8
+      )
       .setStrokeStyle(3, PAPER.dodge, 0.8)
       .setDepth(60)
       .setInteractive({ useHandCursor: true });
+    addAssetIcon(
+      scene,
+      'ui_button_dodge',
+      DODGE_BUTTON.x,
+      DODGE_BUTTON.y,
+      106,
+      60
+    );
     this.dodgeGlyph = inkDodgeGlyph(scene, PAPER.dodge, 1.5)
       .setPosition(DODGE_BUTTON.x - 8, DODGE_BUTTON.y - 12)
       .setDepth(61);
@@ -146,12 +232,25 @@ export class Hud {
     const dodgeRelease = (): void => {
       this.dodgeButton.setScale(1);
     };
-    this.dodgeButton.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, dodgeRelease);
-    this.dodgeButton.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, dodgeRelease);
+    this.dodgeButton.on(
+      Phaser.Input.Events.GAMEOBJECT_POINTER_UP,
+      dodgeRelease
+    );
+    this.dodgeButton.on(
+      Phaser.Input.Events.GAMEOBJECT_POINTER_OUT,
+      dodgeRelease
+    );
 
     // --- Burst meter + button, bottom-center ---
     this.burstPanel = scene.add
-      .rectangle(BURST_BUTTON.x, BURST_BUTTON.y, BURST_BUTTON.width, BURST_BUTTON.height, PAPER.panel, 0.8)
+      .rectangle(
+        BURST_BUTTON.x,
+        BURST_BUTTON.y,
+        BURST_BUTTON.width,
+        BURST_BUTTON.height,
+        PAPER.panel,
+        0.8
+      )
       .setStrokeStyle(3, PAPER.burst, 0.7)
       .setDepth(60)
       .setInteractive({ useHandCursor: true });
@@ -169,9 +268,20 @@ export class Hud {
         .setDepth(61),
       width: BURST_BUTTON.width - 10,
     };
-    inkSpark(scene, PAPER.parchment, 0.8)
-      .setPosition(BURST_BUTTON.x - 82, BURST_BUTTON.y)
-      .setDepth(62);
+    if (
+      !addAssetIcon(
+        scene,
+        'ui_burst_icon',
+        BURST_BUTTON.x - 82,
+        BURST_BUTTON.y,
+        34,
+        62
+      )
+    ) {
+      inkSpark(scene, PAPER.parchment, 0.8)
+        .setPosition(BURST_BUTTON.x - 82, BURST_BUTTON.y)
+        .setDepth(62);
+    }
     this.burstLabel = scene.add
       .text(BURST_BUTTON.x + 8, BURST_BUTTON.y, 'BURST', {
         fontFamily: FONT,
@@ -187,11 +297,18 @@ export class Hud {
 
     // Control hint.
     scene.add
-      .text(640, 606, 'Swipe to attack  •  Hold GUARD to block  •  Tap DODGE to evade  •  Guard at the flash to counter', {
-        fontFamily: FONT,
-        fontSize: '15px',
-        color: MUTED_TEXT,
-      })
+      .text(
+        640,
+        600,
+        'Swipe to attack  •  Hold GUARD to block — it stays your blade and spends stamina\n' +
+          'Stamina refills when a foe falls  •  Guard at the flash to counter  •  Tap DODGE to evade',
+        {
+          fontFamily: FONT,
+          fontSize: '14px',
+          color: MUTED_TEXT,
+          align: 'center',
+        }
+      )
       .setOrigin(0.5)
       .setAlpha(0.8)
       .setDepth(60);
@@ -206,9 +323,11 @@ export class Hud {
   /** True when the point sits on a HUD control — swipes should not start there. */
   isPointOverUi(x: number, y: number): boolean {
     const overGuard =
-      Math.hypot(x - GUARD_BUTTON.x, y - GUARD_BUTTON.y) <= GUARD_BUTTON.radius + 12;
+      Math.hypot(x - GUARD_BUTTON.x, y - GUARD_BUTTON.y) <=
+      GUARD_BUTTON.radius + 12;
     const overDodge =
-      Math.hypot(x - DODGE_BUTTON.x, y - DODGE_BUTTON.y) <= DODGE_BUTTON.radius + 12;
+      Math.hypot(x - DODGE_BUTTON.x, y - DODGE_BUTTON.y) <=
+      DODGE_BUTTON.radius + 12;
     const overBurst =
       Math.abs(x - BURST_BUTTON.x) <= BURST_BUTTON.width / 2 + 12 &&
       Math.abs(y - BURST_BUTTON.y) <= BURST_BUTTON.height / 2 + 12;
@@ -216,10 +335,26 @@ export class Hud {
   }
 
   update(snapshot: HudSnapshot): void {
-    this.setBar(this.playerHealthBar, snapshot.playerHealth, snapshot.playerMaxHealth);
-    this.setBar(this.playerGuardBar, snapshot.playerGuard, snapshot.playerMaxGuard);
-    this.setBar(this.enemyHealthBar, snapshot.enemyHealth, snapshot.enemyMaxHealth);
-    this.setBar(this.enemyGuardBar, snapshot.enemyGuard, snapshot.enemyMaxGuard);
+    this.setBar(
+      this.playerHealthBar,
+      snapshot.playerHealth,
+      snapshot.playerMaxHealth
+    );
+    this.setBar(
+      this.playerGuardBar,
+      snapshot.playerGuard,
+      snapshot.playerMaxGuard
+    );
+    this.setBar(
+      this.enemyHealthBar,
+      snapshot.enemyHealth,
+      snapshot.enemyMaxHealth
+    );
+    this.setBar(
+      this.enemyGuardBar,
+      snapshot.enemyGuard,
+      snapshot.enemyMaxGuard
+    );
     this.setBar(this.burstBar, snapshot.burst, snapshot.burstMax);
 
     if (snapshot.playerGuardBroken) {
@@ -295,12 +430,18 @@ export class Hud {
       })
       .setOrigin(0.5)
       .setDepth(71);
-    const plate = paperRect(this.scene, label.width + 110, sizePx + 38, PAPER.plate, {
-      radius: 12,
-      strokeWidth: 2,
-      strokeColor: accentColor,
-      fillAlpha: 0.88,
-    })
+    const plate = paperRect(
+      this.scene,
+      label.width + 110,
+      sizePx + 38,
+      PAPER.plate,
+      {
+        radius: 12,
+        strokeWidth: 2,
+        strokeColor: accentColor,
+        fillAlpha: 0.88,
+      }
+    )
       .setPosition(640, 190)
       .setDepth(70);
     const spark = inkSpark(this.scene, accentColor, 0.9)
@@ -309,7 +450,12 @@ export class Hud {
 
     const group = [plate, label, spark];
     for (const part of group) part.setScale(0.6);
-    this.scene.tweens.add({ targets: group, scale: 1, duration: 150, ease: 'Back.easeOut' });
+    this.scene.tweens.add({
+      targets: group,
+      scale: 1,
+      duration: 150,
+      ease: 'Back.easeOut',
+    });
     this.scene.tweens.add({
       targets: group,
       alpha: 0,
@@ -345,7 +491,12 @@ export class Hud {
     });
   }
 
-  private panel(centerX: number, centerY: number, width: number, height: number): void {
+  private panel(
+    centerX: number,
+    centerY: number,
+    width: number,
+    height: number
+  ): void {
     this.panelPiece(centerX, centerY, width, height);
   }
 

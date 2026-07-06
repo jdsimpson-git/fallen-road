@@ -40,6 +40,30 @@ export const drawSlashTrail = (
   hit: boolean
 ): void => {
   if (path.length < 2) return;
+  const first = path[0]!;
+  const last = path[path.length - 1]!;
+  const dx = last.x - first.x;
+  const dy = last.y - first.y;
+  const distance = Math.hypot(dx, dy);
+  const textureKey =
+    heavy && scene.textures.exists('vfx_burst_slash')
+      ? 'vfx_burst_slash'
+      : 'vfx_white_swipe_arc';
+  if (scene.textures.exists(textureKey) && distance > 0) {
+    const trail = scene.add
+      .image(first.x + dx / 2, first.y + dy / 2, textureKey)
+      .setDepth(54)
+      .setRotation(Math.atan2(dy, dx))
+      .setAlpha(hit ? 0.95 : 0.55);
+    trail.setDisplaySize(distance * 1.16, heavy ? 104 : 72);
+    scene.tweens.add({
+      targets: trail,
+      alpha: 0,
+      duration: heavy ? 260 : 180,
+      onComplete: () => trail.destroy(),
+    });
+    return;
+  }
   const trail = scene.add.graphics().setDepth(54);
   trail.lineStyle(
     heavy ? 10 : 6,
@@ -47,7 +71,6 @@ export const drawSlashTrail = (
     hit ? 0.95 : 0.55
   );
   trail.beginPath();
-  const first = path[0]!;
   trail.moveTo(first.x, first.y);
   for (let i = 1; i < path.length; i++) {
     trail.lineTo(path[i]!.x, path[i]!.y);

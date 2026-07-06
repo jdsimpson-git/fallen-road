@@ -7,16 +7,17 @@ export const HORIZON_Y = 460;
 
 /**
  * A solid pine-tree silhouette centered on its trunk base at (0, 0).
- * Supplied 'tree-pine' art (normalized to `height`) replaces the procedural
- * shape; a container keeps caller scaling identical for both variants.
+ * Supplied 'pine_silhouette' art (normalized to `height`) replaces the
+ * procedural shape; a container keeps caller scaling identical for both
+ * variants.
  */
 export const pineSilhouette = (
   scene: Phaser.Scene,
   color: number,
   height = 150
 ): Phaser.GameObjects.Graphics | Phaser.GameObjects.Container => {
-  if (scene.textures.exists('tree-pine')) {
-    const image = scene.add.image(0, 0, 'tree-pine').setOrigin(0.5, 1);
+  if (scene.textures.exists('pine_silhouette')) {
+    const image = scene.add.image(0, 0, 'pine_silhouette').setOrigin(0.5, 1);
     image.setScale(height / image.height);
     return scene.add.container(0, 0, [image]);
   }
@@ -43,7 +44,12 @@ export const pineSilhouette = (
 };
 
 /** Jagged tree-line strip along the horizon, from x0 to x1. */
-const treeLineStrip = (scene: Phaser.Scene, x0: number, x1: number, baseY: number): void => {
+const treeLineStrip = (
+  scene: Phaser.Scene,
+  x0: number,
+  x1: number,
+  baseY: number
+): void => {
   const g = scene.add.graphics();
   g.fillStyle(PAPER.treeLine, 1);
   g.beginPath();
@@ -52,7 +58,9 @@ const treeLineStrip = (scene: Phaser.Scene, x0: number, x1: number, baseY: numbe
   let up = true;
   while (x < x1) {
     const step = 26 + Math.random() * 30;
-    const peak = up ? baseY - 26 - Math.random() * 30 : baseY - 6 - Math.random() * 10;
+    const peak = up
+      ? baseY - 26 - Math.random() * 30
+      : baseY - 6 - Math.random() * 10;
     g.lineTo(Math.min(x1, x + step / 2), peak);
     x += step;
     g.lineTo(Math.min(x1, x), up ? baseY - 10 : baseY - 18);
@@ -98,7 +106,9 @@ const darkTower = (scene: Phaser.Scene): void => {
     [652, 336, 2.5],
     [689, 352, 2],
   ] as const) {
-    scene.add.circle(wx, wy, r, PAPER.towerWindow).setBlendMode(Phaser.BlendModes.ADD);
+    scene.add
+      .circle(wx, wy, r, PAPER.towerWindow)
+      .setBlendMode(Phaser.BlendModes.ADD);
     scene.add
       .circle(wx, wy, r * 3.4, PAPER.towerWindow, 0.22)
       .setBlendMode(Phaser.BlendModes.ADD);
@@ -162,12 +172,18 @@ export const spawnRoadsideDrift = (scene: Phaser.Scene): void => {
  */
 export const buildBackdrop = (scene: Phaser.Scene): void => {
   // Sky.
-  scene.add.image(640, 360, 'dusk-sky').setDisplaySize(1280, 720);
+  scene.add.image(640, 360, 'sky_painting').setDisplaySize(1280, 720);
 
   // Dying sun, low over the horizon.
-  scene.add.circle(985, 395, 46, PAPER.sunGlow, 0.85).setBlendMode(Phaser.BlendModes.ADD);
-  scene.add.circle(985, 395, 78, PAPER.sunGlow, 0.2).setBlendMode(Phaser.BlendModes.ADD);
-  scene.add.circle(985, 395, 130, PAPER.sunGlow, 0.08).setBlendMode(Phaser.BlendModes.ADD);
+  scene.add
+    .circle(985, 395, 46, PAPER.sunGlow, 0.85)
+    .setBlendMode(Phaser.BlendModes.ADD);
+  scene.add
+    .circle(985, 395, 78, PAPER.sunGlow, 0.2)
+    .setBlendMode(Phaser.BlendModes.ADD);
+  scene.add
+    .circle(985, 395, 130, PAPER.sunGlow, 0.08)
+    .setBlendMode(Phaser.BlendModes.ADD);
 
   // Far rolling hills.
   const hills = scene.add.graphics();
@@ -183,8 +199,11 @@ export const buildBackdrop = (scene: Phaser.Scene): void => {
   hills.fillPath();
 
   // Supplied tower art sits with its base on the horizon; else the drawn one.
-  if (scene.textures.exists('bg-tower')) {
-    scene.add.image(640, HORIZON_Y + 4, 'bg-tower').setOrigin(0.5, 1);
+  if (scene.textures.exists('dark_tower')) {
+    scene.add
+      .image(640, HORIZON_Y + 4, 'dark_tower')
+      .setOrigin(0.5, 1)
+      .setScale(0.5);
   } else {
     darkTower(scene);
   }
@@ -194,7 +213,13 @@ export const buildBackdrop = (scene: Phaser.Scene): void => {
   treeLineStrip(scene, 714, 1320, HORIZON_Y - 2);
 
   // Ground plane.
-  scene.add.rectangle(640, (HORIZON_Y + 724) / 2, 1280, 724 - HORIZON_Y + 8, PAPER.ground);
+  scene.add.rectangle(
+    640,
+    (HORIZON_Y + 724) / 2,
+    1280,
+    724 - HORIZON_Y + 8,
+    PAPER.ground
+  );
 
   // The road: begins at the tower gate on the horizon, widens to the player.
   const road = scene.add.graphics();
@@ -222,13 +247,25 @@ export const buildBackdrop = (scene: Phaser.Scene): void => {
 
   // Near roadside sentinels.
   pineSilhouette(scene, PAPER.nearTree, 150).setPosition(96, 700).setScale(1.7);
-  pineSilhouette(scene, PAPER.nearTree, 150).setPosition(214, 640).setScale(1.1);
-  pineSilhouette(scene, PAPER.nearTree, 150).setPosition(1180, 688).setScale(1.85);
-  pineSilhouette(scene, PAPER.nearTree, 150).setPosition(1058, 632).setScale(1.05);
+  pineSilhouette(scene, PAPER.nearTree, 150)
+    .setPosition(214, 640)
+    .setScale(1.1);
+  pineSilhouette(scene, PAPER.nearTree, 150)
+    .setPosition(1180, 688)
+    .setScale(1.85);
+  pineSilhouette(scene, PAPER.nearTree, 150)
+    .setPosition(1058, 632)
+    .setScale(1.05);
 
   // Fog hugging the horizon and drifting embers.
-  scene.add.image(640, HORIZON_Y + 2, 'fog-band').setDisplaySize(1320, 96).setAlpha(0.5);
-  scene.add.image(640, HORIZON_Y + 56, 'fog-band').setDisplaySize(1320, 140).setAlpha(0.22);
+  scene.add
+    .image(640, HORIZON_Y + 2, 'fog_band')
+    .setDisplaySize(1320, 96)
+    .setAlpha(0.5);
+  scene.add
+    .image(640, HORIZON_Y + 56, 'fog_band')
+    .setDisplaySize(1320, 140)
+    .setAlpha(0.22);
   startEmbers(scene);
 
   // Film finish.

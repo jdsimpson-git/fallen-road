@@ -45,6 +45,15 @@ export const ENEMY_LOOKS: Record<string, EnemyLook> = {
     bladeLength: 112,
     face: 'duelist',
   },
+  gatekeeper: {
+    body: 0x2f2344,
+    armor: 0x1c1430,
+    accent: 0xffd75e,
+    shield: { shape: 'tower', width: 92, height: 150, color: 0x241a38 },
+    weapon: 'sword',
+    bladeLength: 118,
+    face: 'visor',
+  },
 };
 
 export const DEFAULT_LOOK: EnemyLook = ENEMY_LOOKS['road-soldier']!;

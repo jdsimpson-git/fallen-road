@@ -9,11 +9,15 @@ export const PLAYER_BALANCE = {
   blockDamageReduction: 0.75,
   /** A shield press within this window before impact is a perfect counter. */
   counterWindowMs: 240,
-  /** Guard regeneration pauses for this long after blocking a hit. */
-  guardRegenDelayMs: 800,
-  guardRegenPerSecond: 18,
+  /**
+   * Stamina spent per blocked hit = attack damage x this factor. Stamina does
+   * not regenerate during a duel — it refills only after winning one.
+   */
+  blockGuardCostFactor: 1.1,
   /** Blocking and counters are disabled for this long after a guard break. */
   guardBreakDurationMs: 1400,
+  /** Fraction of max stamina handed back once a guard break wears off. */
+  guardRestoredAfterBreakFraction: 0.35,
   /** A dodge grants evasion frames for this long after the press. */
   dodgeDurationMs: 340,
   /** Time from one dodge press until the next dodge is available. */
