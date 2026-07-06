@@ -68,6 +68,9 @@ export class PreloaderScene extends Phaser.Scene {
   }
 
   private finishBoot(): void {
+    // Supplied sky art is panoramic and drawn aspect-preserving; the
+    // procedural gradient below is meant to be stretched full-screen.
+    this.registry.set('skyIsArt', this.textures.exists('sky_painting'));
     this.makeSkyTexture();
     this.makeFogTexture();
     this.makeGrainTexture();

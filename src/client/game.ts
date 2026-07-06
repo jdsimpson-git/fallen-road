@@ -28,5 +28,8 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  new Game(config);
+  const game = new Game(config);
+  // Debug handle for local preview tooling (synthetic DOM events don't reach
+  // Phaser's input manager reliably); harmless in the Reddit webview.
+  (window as unknown as { __game?: Game }).__game = game;
 });

@@ -94,6 +94,7 @@ export class PaperEnemyView {
     | Phaser.GameObjects.Arc
     | null = null;
 
+  private readonly handRestAlpha: number;
   private readonly headBase: { x: number; y: number };
   private readonly torsoBase: { x: number; y: number };
   private readonly swordArmBase: { x: number; y: number };
@@ -238,13 +239,17 @@ export class PaperEnemyView {
       this.swordArmBase.x,
       this.swordArmBase.y
     );
+    const armArt = this.assetImage(rigAssets?.armFront, 64)?.setPosition(0, 10);
     const arm =
-      this.assetImage(rigAssets?.armFront, 64)?.setPosition(0, 10) ??
-      paperRect(scene, 22, 48, look.body, { radius: 10, ...RIM });
+      armArt ?? paperRect(scene, 22, 48, look.body, { radius: 10, ...RIM });
     arm.setY(10);
+    // With painted arm art the gauntlet is the hand visual; keep the disc as
+    // a faint hit-zone marker that brightens on weapon-hand hits.
+    this.handRestAlpha = armArt ? 0.15 : 1;
     this.hand = scene.add
       .circle(6, 30, 12, look.body)
-      .setStrokeStyle(2, PAPER.rim, 0.5);
+      .setStrokeStyle(2, PAPER.rim, 0.5)
+      .setAlpha(this.handRestAlpha);
     const bladeWidth = look.weapon === 'rapier' ? 8 : 14;
     const weaponArt = this.assetImage(rigAssets?.weapon, bladeWidth * 5.5);
     let weapon: Phaser.GameObjects.GameObject;
@@ -814,9 +819,10 @@ export class PaperEnemyView {
         break;
       case 'weaponHand': {
         const original = this.look.body;
-        this.hand.setFillStyle(PAPER.flash);
+        this.hand.setFillStyle(PAPER.flash).setAlpha(1);
         this.scene.time.delayedCall(80, () => {
-          if (!this.dead) this.hand.setFillStyle(original);
+          if (!this.dead)
+            this.hand.setFillStyle(original).setAlpha(this.handRestAlpha);
         });
         break;
       }

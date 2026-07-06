@@ -171,8 +171,18 @@ export const spawnRoadsideDrift = (scene: Phaser.Scene): void => {
  * (which ends at the tower gate), near trees, fog, and embers.
  */
 export const buildBackdrop = (scene: Phaser.Scene): void => {
-  // Sky.
-  scene.add.image(640, 360, 'sky_painting').setDisplaySize(1280, 720);
+  // Sky. Painted art covers the band above the horizon at its own aspect
+  // (sides crop); the procedural gradient stretches over the full screen.
+  if (scene.registry.get('skyIsArt') === true) {
+    const frame = scene.textures.getFrame('sky_painting');
+    const cover = Math.max(1280 / frame.width, (HORIZON_Y + 40) / frame.height);
+    scene.add
+      .image(640, 0, 'sky_painting')
+      .setOrigin(0.5, 0)
+      .setDisplaySize(frame.width * cover, frame.height * cover);
+  } else {
+    scene.add.image(640, 360, 'sky_painting').setDisplaySize(1280, 720);
+  }
 
   // Dying sun, low over the horizon.
   scene.add
