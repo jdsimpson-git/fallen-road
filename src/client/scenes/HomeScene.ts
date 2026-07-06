@@ -43,7 +43,7 @@ export class HomeScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     // How to fight.
-    paperRect(this, 880, 96, PAPER.panel, {
+    paperRect(this, 820, 124, PAPER.panel, {
       radius: 12,
       strokeWidth: 2,
       strokeColor: PAPER.rim,
@@ -53,14 +53,16 @@ export class HomeScene extends Phaser.Scene {
       .text(
         640,
         340,
-        'SWIPE to attack — heads sway, guards have gaps, legs slow, sword-hands falter\n' +
-          'HOLD GUARD to block  •  PRESS it at the golden flash to perfect-counter  •  Fill BURST',
+        'SWIPE to attack\n' +
+          'Aim for heads, guard gaps, legs, and sword hands\n' +
+          'HOLD GUARD to block. Tap the golden flash to counter.\n' +
+          'Fill BURST for a finisher.',
         {
           fontFamily: FONT,
-          fontSize: '17px',
+          fontSize: '16px',
           color: PARCHMENT_TEXT,
           align: 'center',
-          lineSpacing: 12,
+          lineSpacing: 7,
         }
       )
       .setOrigin(0.5);

@@ -3,9 +3,9 @@ import type { SwipeDirection } from '../../shared/combat/types';
 import { PAPER } from '../ui/theme';
 import { paperRect } from '../ui/paperShapes';
 
-const SWORD_REST = { x: 1120, y: 668, angle: -24 };
-const SHIELD_REST = { x: 195, y: 795 };
-const SHIELD_RAISED = { x: 290, y: 625 };
+const SWORD_REST = { x: 1250, y: 735, angle: -24 };
+const SHIELD_REST = { x: 70, y: 830 };
+const SHIELD_RAISED = { x: 350, y: 612 };
 
 /** Swing offsets (where the sword lunges) per swipe direction. */
 const SWING_VECTORS: Record<
@@ -39,7 +39,7 @@ export class PlayerRigView {
     if (scene.textures.exists('fp_sword')) {
       // Art contract (ASSETS.md): blade points up, grip sits at 85% height.
       const art = scene.add.image(0, 40, 'fp_sword').setOrigin(0.5, 0.85);
-      art.setScale(310 / art.height);
+      art.setScale(270 / art.height);
       this.sword.add(art);
     } else {
       const blade = paperRect(scene, 34, 230, PAPER.blade, {
@@ -89,7 +89,7 @@ export class PlayerRigView {
 
     // Round shield: a dark disc that catches the horizon light on its rim.
     this.shield = scene.add.container(SHIELD_REST.x, SHIELD_REST.y);
-    const radius = 128;
+    const radius = 118;
     if (scene.textures.exists('round_shield')) {
       const art = scene.add.image(0, 0, 'round_shield');
       art.setScale((radius * 2) / art.width);

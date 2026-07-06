@@ -37,9 +37,9 @@ type Bar = {
   valueText?: Phaser.GameObjects.Text;
 };
 
-const GUARD_BUTTON = { x: 1002, y: 640, radius: 56 };
-const DODGE_BUTTON = { x: 278, y: 640, radius: 56 };
-const BURST_BUTTON = { x: 640, y: 668, width: 250, height: 56 };
+const GUARD_BUTTON = { x: 1102, y: 610, radius: 50 };
+const DODGE_BUTTON = { x: 178, y: 610, radius: 50 };
+const BURST_BUTTON = { x: 640, y: 666, width: 232, height: 50 };
 
 const addAssetIcon = (
   scene: Phaser.Scene,
@@ -69,8 +69,10 @@ export class Hud {
   private burstPanel: Phaser.GameObjects.Rectangle;
   private burstPulse: Phaser.Tweens.Tween | null = null;
   private guardButton: Phaser.GameObjects.Arc;
+  private guardButtonArt: Phaser.GameObjects.Image | null;
   private guardLabel: Phaser.GameObjects.Text;
   private dodgeButton: Phaser.GameObjects.Arc;
+  private dodgeButtonArt: Phaser.GameObjects.Image | null;
   private dodgeGlyph: Phaser.GameObjects.Graphics;
   private dodgeLabel: Phaser.GameObjects.Text;
   private dodgeRing: Phaser.GameObjects.Graphics;
@@ -148,32 +150,23 @@ export class Hud {
       .setStrokeStyle(3, PAPER.guard, 0.8)
       .setDepth(60)
       .setInteractive({ useHandCursor: true });
-    addAssetIcon(
+    this.guardButtonArt = addAssetIcon(
       scene,
       'ui_button_guard',
       GUARD_BUTTON.x,
       GUARD_BUTTON.y,
-      106,
+      98,
       60
     );
-    if (
-      !addAssetIcon(
-        scene,
-        'ui_guard_icon',
-        GUARD_BUTTON.x,
-        GUARD_BUTTON.y - 12,
-        44,
-        61
-      )
-    ) {
+    if (!this.guardButtonArt) {
       inkShieldGlyph(scene, PAPER.guard, 1.7)
         .setPosition(GUARD_BUTTON.x, GUARD_BUTTON.y - 12)
         .setDepth(61);
     }
     this.guardLabel = scene.add
-      .text(GUARD_BUTTON.x, GUARD_BUTTON.y + 26, 'GUARD', {
+      .text(GUARD_BUTTON.x, GUARD_BUTTON.y + 29, 'GUARD', {
         fontFamily: FONT,
-        fontSize: '16px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: PARCHMENT_TEXT,
       })
@@ -182,10 +175,18 @@ export class Hud {
 
     this.guardButton.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () => {
       this.guardButton.setScale(0.92);
+      this.guardButtonArt?.setScale(this.guardButtonArt.scaleX * 0.92);
       this.callbacks.onShieldDown();
     });
     const release = (): void => {
       this.guardButton.setScale(1);
+      if (this.guardButtonArt) {
+        const largestSide = Math.max(
+          this.guardButtonArt.width,
+          this.guardButtonArt.height
+        );
+        if (largestSide > 0) this.guardButtonArt.setScale(98 / largestSide);
+      }
       this.callbacks.onShieldUp();
     };
     this.guardButton.on(Phaser.Input.Events.GAMEOBJECT_POINTER_UP, release);
@@ -203,21 +204,23 @@ export class Hud {
       .setStrokeStyle(3, PAPER.dodge, 0.8)
       .setDepth(60)
       .setInteractive({ useHandCursor: true });
-    addAssetIcon(
+    this.dodgeButtonArt = addAssetIcon(
       scene,
       'ui_button_dodge',
       DODGE_BUTTON.x,
       DODGE_BUTTON.y,
-      106,
+      98,
       60
     );
-    this.dodgeGlyph = inkDodgeGlyph(scene, PAPER.dodge, 1.5)
-      .setPosition(DODGE_BUTTON.x - 8, DODGE_BUTTON.y - 12)
-      .setDepth(61);
+    this.dodgeGlyph = this.dodgeButtonArt
+      ? scene.add.graphics()
+      : inkDodgeGlyph(scene, PAPER.dodge, 1.5)
+          .setPosition(DODGE_BUTTON.x - 8, DODGE_BUTTON.y - 12)
+          .setDepth(61);
     this.dodgeLabel = scene.add
-      .text(DODGE_BUTTON.x, DODGE_BUTTON.y + 26, 'DODGE', {
+      .text(DODGE_BUTTON.x, DODGE_BUTTON.y + 29, 'DODGE', {
         fontFamily: FONT,
-        fontSize: '16px',
+        fontSize: '15px',
         fontStyle: 'bold',
         color: PARCHMENT_TEXT,
       })
@@ -227,10 +230,18 @@ export class Hud {
 
     this.dodgeButton.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () => {
       this.dodgeButton.setScale(0.92);
+      this.dodgeButtonArt?.setScale(this.dodgeButtonArt.scaleX * 0.92);
       this.callbacks.onDodgePressed();
     });
     const dodgeRelease = (): void => {
       this.dodgeButton.setScale(1);
+      if (this.dodgeButtonArt) {
+        const largestSide = Math.max(
+          this.dodgeButtonArt.width,
+          this.dodgeButtonArt.height
+        );
+        if (largestSide > 0) this.dodgeButtonArt.setScale(98 / largestSide);
+      }
     };
     this.dodgeButton.on(
       Phaser.Input.Events.GAMEOBJECT_POINTER_UP,
@@ -341,9 +352,11 @@ export class Hud {
 
     if (snapshot.playerGuardBroken) {
       this.guardButton.setStrokeStyle(3, PAPER.danger, 1);
+      this.guardLabel.setFontSize(13);
       this.guardLabel.setText('BROKEN');
     } else {
       this.guardButton.setStrokeStyle(3, PAPER.guard, 0.8);
+      this.guardLabel.setFontSize(15);
       this.guardLabel.setText('GUARD');
     }
 
@@ -362,7 +375,12 @@ export class Hud {
       );
       this.dodgeRing.strokePath();
     }
-    const dodgePieces = [this.dodgeButton, this.dodgeGlyph, this.dodgeLabel];
+    const dodgePieces = [
+      this.dodgeButton,
+      this.dodgeButtonArt,
+      this.dodgeGlyph,
+      this.dodgeLabel,
+    ].filter((piece) => piece !== null);
     for (const piece of dodgePieces) piece.setAlpha(dodgeReady ? 1 : 0.45);
     if (dodgeReady && !this.dodgeReady) {
       this.scene.tweens.add({
@@ -380,7 +398,8 @@ export class Hud {
     if (ready !== this.burstReady) {
       this.burstReady = ready;
       if (ready) {
-        this.burstLabel.setText('BURST — READY!');
+        this.burstLabel.setFontSize(18);
+        this.burstLabel.setText('BURST READY');
         this.burstPulse = this.scene.tweens.add({
           targets: [this.burstPanel, this.burstLabel],
           scaleX: 1.06,
@@ -391,6 +410,7 @@ export class Hud {
           ease: 'Sine.easeInOut',
         });
       } else {
+        this.burstLabel.setFontSize(22);
         this.burstLabel.setText('BURST');
         this.burstPulse?.stop();
         this.burstPulse = null;
