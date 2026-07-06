@@ -20,6 +20,12 @@ type EnemyRigAssets = {
   armBack: string;
   legFront: string;
   legBack: string;
+  /**
+   * The rig's straightest leg sprite, used for BOTH legs (right one
+   * mirrored). The sheets' paired leg sprites bake in stride poses that
+   * read bow-legged when planted side by side.
+   */
+  stanceLeg: string;
   weapon: string;
   shield?: string;
 };
@@ -32,6 +38,7 @@ const ENEMY_RIG_ASSETS: Record<string, EnemyRigAssets> = {
     armBack: 'road_soldier_arm_back',
     legFront: 'road_soldier_leg_front',
     legBack: 'road_soldier_leg_back',
+    stanceLeg: 'road_soldier_leg_front',
     weapon: 'road_soldier_weapon',
     shield: 'road_soldier_shield',
   },
@@ -42,6 +49,7 @@ const ENEMY_RIG_ASSETS: Record<string, EnemyRigAssets> = {
     armBack: 'road_soldier_arm_back',
     legFront: 'road_soldier_leg_front',
     legBack: 'road_soldier_leg_back',
+    stanceLeg: 'road_soldier_leg_front',
     weapon: 'road_soldier_weapon',
     shield: 'road_soldier_shield',
   },
@@ -52,6 +60,7 @@ const ENEMY_RIG_ASSETS: Record<string, EnemyRigAssets> = {
     armBack: 'fallen_rival_arm_back',
     legFront: 'fallen_rival_leg_front',
     legBack: 'fallen_rival_leg_back',
+    stanceLeg: 'fallen_rival_leg_front',
     weapon: 'fallen_rival_weapon_frost_spear',
     shield: 'fallen_rival_shield',
   },
@@ -62,6 +71,7 @@ const ENEMY_RIG_ASSETS: Record<string, EnemyRigAssets> = {
     armBack: 'warden_king_arm_back',
     legFront: 'warden_king_leg_front',
     legBack: 'warden_king_leg_back',
+    stanceLeg: 'warden_king_leg_back',
     weapon: 'warden_king_weapon_hammer',
   },
 };
@@ -163,9 +173,10 @@ export class PaperEnemyView {
     const legWidth = Math.max(22, torsoHalfW * 0.44);
     const legParts: Phaser.GameObjects.GameObject[] = [];
     for (const side of [-1, 1]) {
-      const legKey = side < 0 ? rigAssets?.legBack : rigAssets?.legFront;
+      const legArt = this.assetImage(rigAssets?.stanceLeg, legsHeight * 1.32);
+      legArt?.setFlipX(side > 0);
       const leg =
-        this.assetImage(legKey, legsHeight * 1.32) ??
+        legArt ??
         paperRect(scene, legWidth, legsHeight, look.armor, {
           radius: 8,
           ...RIM,
@@ -335,16 +346,22 @@ export class PaperEnemyView {
         this.shieldArmBase.y
       );
       const s = look.shield;
-      const armBack = this.assetImage(rigAssets?.armBack, 68);
+      const shieldHeight =
+        s.shape === 'round' ? s.radius * 2.25 : s.height * 1.05;
+      const shieldArt = this.assetImage(rigAssets?.shield, shieldHeight);
+      const armBack = this.assetImage(
+        rigAssets?.armBack,
+        // With no dedicated shield art the armored arm itself is the guard
+        // visual (e.g. the Warden King's plated arm) — draw it shield-sized
+        // instead of backing a flat procedural plate.
+        shieldArt ? 68 : shieldHeight * 1.15
+      );
       if (armBack) {
         armBack.setPosition(2, 16);
         shieldArm.add(armBack);
       }
-      const shieldHeight =
-        s.shape === 'round' ? s.radius * 2.25 : s.height * 1.05;
-      const shieldArt = this.assetImage(rigAssets?.shield, shieldHeight);
-      if (shieldArt) {
-        shieldArm.add(shieldArt);
+      if (shieldArt || armBack) {
+        if (shieldArt) shieldArm.add(shieldArt);
         if (s.shape === 'round') {
           const flash = scene.add
             .circle(0, 0, s.radius, PAPER.flash)

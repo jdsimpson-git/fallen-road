@@ -77,6 +77,7 @@ SPRITES = {
     "sky_painting": {"sheet": "assets2", "roi": [90, 88, 1036, 406], "opaque": True, "fit": (1280, 720)},
     "dark_tower": {"sheet": "assets2", "roi": [1092, 25, 1420, 470], "fit": (512, 640), "fit_height": 640},
     "pine_silhouette": {"sheet": "assets2", "roi": [40, 480, 245, 800], "fit": (256, 512)},
+    "castle_gate": {"sheet": "assets2", "roi": [968, 800, 1428, 1060], "fit": (960, 720)},
     "fog_band": {"sheet": "assets2", "roi": [415, 550, 915, 710], "fit": (1280, 256)},
     # --- assets3.png: Fallen Rival rig ---
     "fallen_rival_head": {"sheet": "assets3", "roi": [80, 160, 300, 480], "fit": (192, 192)},

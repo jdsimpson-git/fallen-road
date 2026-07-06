@@ -2,6 +2,7 @@
   "images": [
     { "key": "sky_painting", "file": "sky_painting.png" },
     { "key": "dark_tower", "file": "dark_tower.png" },
+    { "key": "castle_gate", "file": "castle_gate.png" },
     { "key": "pine_silhouette", "file": "pine_silhouette.png" },
     { "key": "fog_band", "file": "fog_band.png" },
     { "key": "fp_sword", "file": "fp_sword.png" },

@@ -42,7 +42,11 @@ import { SwipeInput } from '../combat/SwipeInput';
 import { PaperEnemyView } from '../entities/PaperEnemyView';
 import { PlayerRigView } from '../entities/PlayerRigView';
 import { Hud } from '../ui/Hud';
-import { buildBackdrop, spawnRoadsideDrift } from '../ui/backdrop';
+import {
+  buildBackdrop,
+  spawnRoadsideDrift,
+  type BackdropHandles,
+} from '../ui/backdrop';
 import { damageVignette, drawSlashTrail, spawnPaperFragments } from '../ui/effects';
 import { DODGE_TEXT, FONT, MUTED_TEXT, PAPER, PARCHMENT_TEXT } from '../ui/theme';
 
@@ -77,6 +81,7 @@ export class BattleScene extends Phaser.Scene {
   private enemyGuard: GuardMeter;
   private enemyGuardBrokenState: boolean;
 
+  private backdrop: BackdropHandles;
   private rig: PlayerRigView;
   private hud: Hud;
   private tracker: PlayerPatternTracker;
@@ -129,7 +134,7 @@ export class BattleScene extends Phaser.Scene {
     };
     this.tracker = new PlayerPatternTracker();
 
-    buildBackdrop(this);
+    this.backdrop = buildBackdrop(this);
     this.rig = new PlayerRigView(this);
     this.hud = new Hud(this, {
       onShieldDown: () => this.pressShield(),
@@ -315,9 +320,60 @@ export class BattleScene extends Phaser.Scene {
           );
         }
       });
-      this.nextSpawnAt = this.time.now + (gatesNext ? TRAVEL_MS + 1000 : TRAVEL_MS);
+      const travelMs = gatesNext ? TRAVEL_MS + 1000 : TRAVEL_MS;
+      this.nextSpawnAt = this.time.now + travelMs;
+      if (gatesNext) {
+        this.approachGates(travelMs - 400);
+      } else {
+        this.approachTower(travelMs - 400);
+      }
     }
     void this.recordVictory();
+  }
+
+  /**
+   * Each stretch of road walked brings the castle visibly closer: the tower
+   * grows from its distant 0.38 up toward ~0.87 across the six road fights.
+   */
+  private approachTower(durationMs: number): void {
+    const tower = this.backdrop.tower;
+    if (!tower) return;
+    const progress = Math.min(1, (this.encounterNumber - 1) / ROAD_FIGHTS_BEFORE_BOSS);
+    this.tweens.add({
+      targets: tower,
+      scale: 0.38 * Math.pow(2.3, progress),
+      alpha: 0.88 + progress * 0.12,
+      duration: durationMs,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  /**
+   * The last stretch: the tower slides past overhead while the castle gate
+   * fills the road's end, where the Gatekeeper waits.
+   */
+  private approachGates(durationMs: number): void {
+    const { tower, gate } = this.backdrop;
+    if (tower) {
+      this.tweens.add({
+        targets: tower,
+        scale: tower.scale * 1.35,
+        alpha: 0,
+        duration: durationMs * 0.8,
+        ease: 'Sine.easeIn',
+      });
+    }
+    if (gate) {
+      const finalScale = gate.scale;
+      gate.setScale(finalScale * 0.8).setAlpha(0);
+      this.tweens.add({
+        targets: gate,
+        scale: finalScale,
+        alpha: 1,
+        duration: durationMs,
+        ease: 'Sine.easeOut',
+      });
+    }
   }
 
   private async recordVictory(): Promise<void> {

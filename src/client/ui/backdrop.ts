@@ -6,6 +6,16 @@ import { addPaperOverlays } from './paperShapes';
 export const HORIZON_Y = 460;
 
 /**
+ * Backdrop pieces the battle scene animates as the run progresses: the tower
+ * swells while fights are won, then the castle gate fades in for the boss.
+ * Either handle is null when its art wasn't supplied (procedural fallback).
+ */
+export type BackdropHandles = {
+  tower: Phaser.GameObjects.Image | null;
+  gate: Phaser.GameObjects.Image | null;
+};
+
+/**
  * A solid pine-tree silhouette centered on its trunk base at (0, 0).
  * Supplied 'pine_silhouette' art (normalized to `height`) replaces the
  * procedural shape; a container keeps caller scaling identical for both
@@ -170,7 +180,7 @@ export const spawnRoadsideDrift = (scene: Phaser.Scene): void => {
  * dying sun, far hills, the tower, flanking tree lines, ground, the road
  * (which ends at the tower gate), near trees, fog, and embers.
  */
-export const buildBackdrop = (scene: Phaser.Scene): void => {
+export const buildBackdrop = (scene: Phaser.Scene): BackdropHandles => {
   // Sky. Painted art covers the band above the horizon at its own aspect
   // (sides crop); the procedural gradient stretches over the full screen.
   if (scene.registry.get('skyIsArt') === true) {
@@ -209,14 +219,25 @@ export const buildBackdrop = (scene: Phaser.Scene): void => {
   hills.fillPath();
 
   // Supplied tower art sits with its base on the horizon; else the drawn one.
+  let tower: Phaser.GameObjects.Image | null = null;
   if (scene.textures.exists('dark_tower')) {
-    scene.add
+    tower = scene.add
       .image(640, HORIZON_Y + 4, 'dark_tower')
       .setOrigin(0.5, 1)
       .setScale(0.38)
       .setAlpha(0.88);
   } else {
     darkTower(scene);
+  }
+
+  // The castle gate waits invisible at the road's end until the boss approach.
+  let gate: Phaser.GameObjects.Image | null = null;
+  if (scene.textures.exists('castle_gate')) {
+    gate = scene.add
+      .image(640, HORIZON_Y + 4, 'castle_gate')
+      .setOrigin(0.5, 1)
+      .setAlpha(0);
+    gate.setScale(620 / gate.width);
   }
 
   // Tree lines flank the road corridor — never under it.
@@ -281,4 +302,6 @@ export const buildBackdrop = (scene: Phaser.Scene): void => {
 
   // Film finish.
   addPaperOverlays(scene);
+
+  return { tower, gate };
 };
