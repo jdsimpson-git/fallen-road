@@ -29,6 +29,7 @@ import {
 import { canActivateBurst, classifyHitBurstEvent, gainBurst } from '../../shared/combat/burst';
 import { isStrikeBlocked } from '../../shared/combat/directionalGuard';
 import { PlayerPatternTracker } from '../../shared/combat/patterns';
+import { blockedHitGuardCost } from '../../shared/combat/playerGuard';
 import { EnemyBrain } from '../../shared/combat/EnemyBrain';
 import type {
   ActiveHitZone,
@@ -282,8 +283,11 @@ export class BattleScene extends Phaser.Scene {
     this.encounterNumber += 1;
     this.playerBurst = gainBurst(this.playerBurst, 'kill', PLAYER_BALANCE.burstMax);
     this.playerHealth = Math.min(PLAYER_BALANCE.maxHealth, this.playerHealth + HEAL_PER_KILL);
-    // Winning the duel is the only thing that refills stamina.
+    // Winning the duel is the only thing that repairs the shield.
     this.playerGuard = createGuardMeter(PLAYER_BALANCE.maxGuard);
+    this.holdingBlock = false;
+    this.lastShieldPressAt = null;
+    this.rig.restoreShield();
     this.brain?.notifyDied();
     this.hud.setEnemyActive(null);
 
@@ -548,13 +552,13 @@ export class BattleScene extends Phaser.Scene {
         this.playerBurst = gainBurst(this.playerBurst, 'normalBlock', PLAYER_BALANCE.burstMax);
         this.cameras.main.shake(70, 0.003);
         spawnPaperFragments(this, 300, 620, 4, PAPER.guard);
-        // Stamina cost scales with how hard the blocked attack hits.
-        const staminaCost = Math.round(attack.damage * PLAYER_BALANCE.blockGuardCostFactor);
+        // Shield durability gets chewed up quickly: most foes shatter it in 2-3 blocks.
+        const durabilityCost = blockedHitGuardCost(attack.damage, PLAYER_BALANCE);
         const result = applyGuardDamage(
           this.playerGuard,
-          staminaCost,
+          durabilityCost,
           now,
-          PLAYER_BALANCE.guardBreakDurationMs
+          PLAYER_BALANCE.shieldDestroyedUntilNextFightMs
         );
         this.playerGuard = result.meter;
         if (result.broke) this.onPlayerGuardBroken();
@@ -569,23 +573,11 @@ export class BattleScene extends Phaser.Scene {
 
   private onPlayerGuardBroken(): void {
     this.holdingBlock = false;
+    this.lastShieldPressAt = null;
     this.rig.breakShield();
-    this.hud.showMessage('GUARD BROKEN!', '#d94f3d');
+    this.hud.showMessage('SHIELD DESTROYED!', '#d94f3d');
     spawnPaperFragments(this, 300, 640, 14, PAPER.guard);
     this.cameras.main.shake(160, 0.008);
-    this.time.delayedCall(PLAYER_BALANCE.guardBreakDurationMs, () => {
-      if (this.mode === 'over') return;
-      // No mid-duel regen, so recovery hands back a stamina floor (never
-      // downgrading a refill earned by a kill in the meantime).
-      const floor = Math.round(
-        this.playerGuard.max * PLAYER_BALANCE.guardRestoredAfterBreakFraction
-      );
-      this.playerGuard = {
-        ...this.playerGuard,
-        current: Math.max(this.playerGuard.current, floor),
-      };
-      this.rig.restoreShield();
-    });
   }
 
   private damagePlayer(amount: number, fullHit: boolean): void {

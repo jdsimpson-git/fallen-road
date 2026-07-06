@@ -55,8 +55,8 @@ export class HomeScene extends Phaser.Scene {
         340,
         'SWIPE to attack\n' +
           'Aim for heads, guard gaps, legs, and sword hands\n' +
-          'HOLD GUARD to block. Tap the golden flash to counter.\n' +
-          'Fill BURST for a finisher.',
+          'HOLD GUARD to block. A few hits shatter it.\n' +
+          'Tap golden flashes to counter. Fill BURST.',
         {
           fontFamily: FONT,
           fontSize: '16px',
