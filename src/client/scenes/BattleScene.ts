@@ -337,10 +337,6 @@ export class BattleScene extends Phaser.Scene {
     if (this.mode === 'over' || this.burstActive) return;
     const now = this.time.now;
 
-    if (isGuardBroken(this.playerGuard, now)) {
-      this.hud.showFloatingText(gesture.end.x, gesture.end.y, 'stunned', '#d94f3d');
-      return;
-    }
     // The shield commits you: no swinging while it is raised.
     if (this.holdingBlock) {
       this.hud.showFloatingText(gesture.end.x, gesture.end.y, 'guarding', MUTED_TEXT);
@@ -481,8 +477,8 @@ export class BattleScene extends Phaser.Scene {
   private pressShield(): void {
     if (this.mode === 'over') return;
     const now = this.time.now;
-    this.lastShieldPressAt = now;
     if (isGuardBroken(this.playerGuard, now)) return;
+    this.lastShieldPressAt = now;
     if (!this.holdingBlock) {
       this.holdingBlock = true;
       this.tracker.recordBlock(now);
@@ -498,11 +494,10 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  /** Tap dodge: brief evasion frames on a cooldown. Stun still locks it out. */
+  /** Tap dodge: brief evasion frames on a cooldown. */
   private pressDodge(): void {
     if (this.mode === 'over' || this.burstActive) return;
     const now = this.time.now;
-    if (isGuardBroken(this.playerGuard, now)) return;
     const result = startDodge(this.playerDodge, now, PLAYER_BALANCE);
     if (!result.started) return;
     this.playerDodge = result.state;
@@ -600,7 +595,6 @@ export class BattleScene extends Phaser.Scene {
     const now = this.time.now;
     if (this.mode !== 'fight' || this.burstActive || !this.brain || this.brain.isDead()) return;
     if (!canActivateBurst(this.playerBurst, PLAYER_BALANCE.burstMax)) return;
-    if (isGuardBroken(this.playerGuard, now)) return;
 
     // Bursting is an all-out attack — the shield drops for it.
     this.releaseShield();
