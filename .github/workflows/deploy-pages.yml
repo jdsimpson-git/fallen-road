@@ -32,10 +32,13 @@ jobs:
           VITE_ASSET_VERSION: ${{ github.sha }}
       # The bare Pages URL should open the game directly.
       - run: cp dist/client/game.html dist/client/index.html
-      - name: Stamp Pages assets with commit SHA
+      - name: Stamp Pages entrypoint assets with commit SHA
         run: |
+          cp dist/client/game.js "dist/client/game-${GITHUB_SHA}.js"
+          cp dist/client/game.css "dist/client/game-${GITHUB_SHA}.css"
+          cp dist/client/modulepreload-polyfill.js "dist/client/modulepreload-polyfill-${GITHUB_SHA}.js"
           for file in dist/client/game.html dist/client/index.html; do
-            perl -0pi -e 's|\./game\.js|./game.js?v=$ENV{GITHUB_SHA}|g; s|\./game\.css|./game.css?v=$ENV{GITHUB_SHA}|g; s|\./modulepreload-polyfill\.js|./modulepreload-polyfill.js?v=$ENV{GITHUB_SHA}|g' "$file"
+            perl -0pi -e 's|\./game\.js|./game-$ENV{GITHUB_SHA}.js|g; s|\./game\.css|./game-$ENV{GITHUB_SHA}.css|g; s|\./modulepreload-polyfill\.js|./modulepreload-polyfill-$ENV{GITHUB_SHA}.js|g' "$file"
           done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
