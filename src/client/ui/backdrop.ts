@@ -203,7 +203,8 @@ export const buildBackdrop = (scene: Phaser.Scene): void => {
     scene.add
       .image(640, HORIZON_Y + 4, 'dark_tower')
       .setOrigin(0.5, 1)
-      .setScale(0.5);
+      .setScale(0.38)
+      .setAlpha(0.88);
   } else {
     darkTower(scene);
   }

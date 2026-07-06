@@ -294,24 +294,6 @@ export class Hud {
     this.burstPanel.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () => {
       this.callbacks.onBurstPressed();
     });
-
-    // Control hint.
-    scene.add
-      .text(
-        640,
-        600,
-        'Swipe to attack  •  Hold GUARD to block — it stays your blade and spends stamina\n' +
-          'Stamina refills when a foe falls  •  Guard at the flash to counter  •  Tap DODGE to evade',
-        {
-          fontFamily: FONT,
-          fontSize: '14px',
-          color: MUTED_TEXT,
-          align: 'center',
-        }
-      )
-      .setOrigin(0.5)
-      .setAlpha(0.8)
-      .setDepth(60);
   }
 
   /** Show the enemy readout (with its name) or hide it while traveling. */
