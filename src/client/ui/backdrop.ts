@@ -305,3 +305,45 @@ export const buildBackdrop = (scene: Phaser.Scene): BackdropHandles => {
 
   return { tower, gate };
 };
+
+/**
+ * Inside the castle: the painted throne room covers the whole view (sides
+ * crop at its native aspect), with warm brazier glows pulsing for life.
+ * Fallback is a bare dark hall so a missing painting never blocks the boss.
+ */
+export const buildCastleBackdrop = (scene: Phaser.Scene): BackdropHandles => {
+  if (scene.textures.exists('castle_interior')) {
+    const frame = scene.textures.getFrame('castle_interior');
+    const cover = Math.max(1280 / frame.width, 720 / frame.height);
+    scene.add
+      .image(640, 360, 'castle_interior')
+      .setDisplaySize(frame.width * cover, frame.height * cover);
+  } else {
+    scene.add.rectangle(640, 360, 1280, 720, 0x171223);
+    scene.add.rectangle(640, 620, 1280, 200, 0x241c33);
+  }
+
+  // Firelight breathing over the hall.
+  for (const [bx, by] of [
+    [305, 330],
+    [975, 330],
+  ] as const) {
+    const glow = scene.add
+      .ellipse(bx, by, 220, 260, PAPER.ember, 0.1)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    scene.tweens.add({
+      targets: glow,
+      alpha: { from: 0.55, to: 1 },
+      scaleX: { from: 0.92, to: 1.06 },
+      scaleY: { from: 0.92, to: 1.06 },
+      duration: 1700 + Math.random() * 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+  startEmbers(scene);
+
+  addPaperOverlays(scene);
+  return { tower: null, gate: null };
+};

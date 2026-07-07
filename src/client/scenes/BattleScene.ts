@@ -3,6 +3,7 @@ import { PLAYER_BALANCE } from '../../shared/balance/player';
 import { SWORD } from '../../shared/balance/weapons';
 import {
   ENEMIES,
+  FALLEN_KING,
   GATEKEEPER,
   GAUNTLET_ORDER,
   ROAD_FIGHTS_BEFORE_BOSS,
@@ -44,6 +45,7 @@ import { PlayerRigView } from '../entities/PlayerRigView';
 import { Hud } from '../ui/Hud';
 import {
   buildBackdrop,
+  buildCastleBackdrop,
   spawnRoadsideDrift,
   type BackdropHandles,
 } from '../ui/backdrop';
@@ -57,6 +59,9 @@ const HEAL_PER_KILL = 18;
 
 type Mode = 'travel' | 'fight' | 'over';
 
+/** The road leads to the gates; past them, the throne room and the King. */
+type Stage = 'road' | 'castle';
+
 type RunStats = {
   foesFelled: number;
   damageDealt: number;
@@ -66,12 +71,22 @@ type RunStats = {
   attacksEvaded: number;
 };
 
+/** Run state that survives the scene restart when stepping into the castle. */
+type CarriedRun = {
+  playerHealth: number;
+  playerBurst: number;
+  stats: RunStats;
+  runStartAt: number;
+};
+
 /**
  * The road itself: one continuous scene. The player walks toward the tower;
  * enemies step out of the fog one after another; the run ends only in death.
  */
 export class BattleScene extends Phaser.Scene {
   private mode: Mode;
+  private stage: Stage;
+  private carried: CarriedRun | null;
   private encounterNumber: number;
 
   private def: EnemyDefinition | null;
@@ -104,6 +119,11 @@ export class BattleScene extends Phaser.Scene {
     super('Battle');
   }
 
+  init(data?: { stage?: Stage; carry?: CarriedRun }): void {
+    this.stage = data?.stage === 'castle' ? 'castle' : 'road';
+    this.carried = data?.carry ?? null;
+  }
+
   create(): void {
     this.tweens.timeScale = 1;
     this.mode = 'travel';
@@ -114,17 +134,17 @@ export class BattleScene extends Phaser.Scene {
     this.enemyHealth = 0;
     this.enemyGuard = createGuardMeter(1);
     this.enemyGuardBrokenState = false;
-    this.playerHealth = PLAYER_BALANCE.maxHealth;
+    this.playerHealth = this.carried?.playerHealth ?? PLAYER_BALANCE.maxHealth;
     this.playerGuard = createGuardMeter(PLAYER_BALANCE.maxGuard);
-    this.playerBurst = 0;
+    this.playerBurst = this.carried?.playerBurst ?? 0;
     this.playerDodge = createDodgeState();
     this.holdingBlock = false;
     this.lastShieldPressAt = null;
     this.nextAttackReadyAt = 0;
     this.hitStopUntil = 0;
     this.burstActive = false;
-    this.runStartAt = this.time.now;
-    this.stats = {
+    this.runStartAt = this.carried?.runStartAt ?? this.time.now;
+    this.stats = this.carried?.stats ?? {
       foesFelled: 0,
       damageDealt: 0,
       damageTaken: 0,
@@ -134,7 +154,10 @@ export class BattleScene extends Phaser.Scene {
     };
     this.tracker = new PlayerPatternTracker();
 
-    this.backdrop = buildBackdrop(this);
+    this.backdrop =
+      this.stage === 'castle'
+        ? buildCastleBackdrop(this)
+        : buildBackdrop(this);
     this.rig = new PlayerRigView(this);
     this.hud = new Hud(this, {
       onShieldDown: () => this.pressShield(),
@@ -170,12 +193,19 @@ export class BattleScene extends Phaser.Scene {
       delay: 640,
       loop: true,
       callback: () => {
-        if (this.mode === 'travel') spawnRoadsideDrift(this);
+        if (this.mode === 'travel' && this.stage === 'road')
+          spawnRoadsideDrift(this);
       },
     });
 
-    this.hud.showMessage('THE ROAD TO THE TOWER', '#ffb347', 30);
-    this.nextSpawnAt = this.time.now + FIRST_TRAVEL_MS;
+    if (this.stage === 'castle') {
+      this.cameras.main.fadeIn(700, 0, 0, 0);
+      this.hud.showMessage('THE THRONE ROOM OF THE FALLEN KING', '#8fd8ff', 26);
+      this.nextSpawnAt = this.time.now + 1800;
+    } else {
+      this.hud.showMessage('THE ROAD TO THE TOWER', '#ffb347', 30);
+      this.nextSpawnAt = this.time.now + FIRST_TRAVEL_MS;
+    }
   }
 
   override update(time: number, delta: number): void {
@@ -220,9 +250,16 @@ export class BattleScene extends Phaser.Scene {
   // ------------------------------------------------------------------
 
   private spawnEnemy(): void {
-    const bossFight = this.encounterNumber > ROAD_FIGHTS_BEFORE_BOSS;
+    const bossFight =
+      this.stage === 'castle' ||
+      this.encounterNumber > ROAD_FIGHTS_BEFORE_BOSS;
     const id = GAUNTLET_ORDER[(this.encounterNumber - 1) % GAUNTLET_ORDER.length]!;
-    const def = bossFight ? GATEKEEPER : (ENEMIES[id] ?? ROAD_SOLDIER);
+    const def =
+      this.stage === 'castle'
+        ? FALLEN_KING
+        : bossFight
+          ? GATEKEEPER
+          : (ENEMIES[id] ?? ROAD_SOLDIER);
     this.def = def;
     this.enemyHealth = def.maxHealth;
     this.enemyGuard = createGuardMeter(def.maxGuard);
@@ -270,7 +307,10 @@ export class BattleScene extends Phaser.Scene {
     );
 
     this.hud.setEnemyActive(def.name);
-    if (bossFight) {
+    if (this.stage === 'castle') {
+      this.hud.showMessage('THE FALLEN KING RISES', '#8fd8ff', 34);
+      this.cameras.main.shake(260, 0.007);
+    } else if (bossFight) {
       this.hud.showMessage('THE GATEKEEPER BARS THE GATES', '#ffd75e', 30);
       this.cameras.main.shake(200, 0.006);
     } else {
@@ -308,7 +348,11 @@ export class BattleScene extends Phaser.Scene {
     });
 
     if (felled?.tier === 'boss') {
-      this.handleTriumph();
+      if (felled.id === GATEKEEPER.id && this.stage === 'road') {
+        this.enterCastle();
+      } else {
+        this.handleTriumph();
+      }
     } else {
       const gatesNext = this.encounterNumber > ROAD_FIGHTS_BEFORE_BOSS;
       this.time.delayedCall(900, () => {
@@ -345,6 +389,34 @@ export class BattleScene extends Phaser.Scene {
       alpha: 0.88 + progress * 0.12,
       duration: durationMs,
       ease: 'Sine.easeInOut',
+    });
+  }
+
+  /**
+   * The Gatekeeper falls and the gates swing open: fade to black and restart
+   * this scene inside the castle, carrying the run's health/burst/stats.
+   */
+  private enterCastle(): void {
+    if (this.mode === 'over') return;
+    this.nextSpawnAt = Number.POSITIVE_INFINITY;
+    this.hud.showMessage('THE GATES OPEN', '#ffd75e', 40);
+    this.time.delayedCall(1200, () => {
+      if (this.mode === 'over') return;
+      this.cameras.main.fadeOut(800, 0, 0, 0);
+      this.cameras.main.once(
+        Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
+        () => {
+          this.scene.restart({
+            stage: 'castle',
+            carry: {
+              playerHealth: this.playerHealth,
+              playerBurst: this.playerBurst,
+              stats: this.stats,
+              runStartAt: this.runStartAt,
+            },
+          });
+        }
+      );
     });
   }
 
@@ -730,7 +802,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.mode === 'over') return;
     this.mode = 'over';
     this.holdingBlock = false;
-    this.hud.showMessage('THE GATES OPEN', '#ffd75e', 46);
+    this.hud.showMessage('THE THRONE IS RECLAIMED', '#ffd75e', 46);
     this.cameras.main.flash(300, 60, 50, 20);
     const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0).setDepth(85);
     this.tweens.add({ targets: overlay, fillAlpha: 0.4, duration: 900 });
@@ -747,7 +819,7 @@ export class BattleScene extends Phaser.Scene {
       .setDepth(91);
     panel.setInteractive();
     this.add
-      .text(640, 208, victory ? 'THE GATES OPEN' : 'THE ROAD CLAIMS YOU', {
+      .text(640, 208, victory ? 'THE THRONE RECLAIMED' : 'THE ROAD CLAIMS YOU', {
         fontFamily: FONT,
         fontSize: '36px',
         fontStyle: 'bold',
@@ -777,7 +849,11 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(92);
 
-    this.endButton(640, 478, 'WALK AGAIN', () => this.scene.restart());
+    // Explicit data: Phaser keeps the previous scene data when none is
+    // passed, which would otherwise respawn a fallen player in the castle.
+    this.endButton(640, 478, 'WALK AGAIN', () =>
+      this.scene.restart({ stage: 'road' })
+    );
     this.endButton(640, 534, 'RETURN HOME', () => this.scene.start('Home'), true);
   }
 

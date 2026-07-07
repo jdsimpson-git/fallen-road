@@ -28,6 +28,8 @@ type EnemyRigAssets = {
   stanceLeg: string;
   weapon: string;
   shield?: string;
+  /** Optional cape layer rendered behind the torso, breathing with it. */
+  cape?: string;
 };
 
 const ENEMY_RIG_ASSETS: Record<string, EnemyRigAssets> = {
@@ -73,6 +75,19 @@ const ENEMY_RIG_ASSETS: Record<string, EnemyRigAssets> = {
     legBack: 'warden_king_leg_back',
     stanceLeg: 'warden_king_leg_back',
     weapon: 'warden_king_weapon_hammer',
+  },
+  'fallen-king': {
+    head: 'fallen_king_head',
+    torso: 'fallen_king_torso',
+    armFront: 'fallen_king_arm_front',
+    // The torso art bakes in the off-hand and hip shield; no shield arm is
+    // built (the look omits `shield`), so armBack never renders.
+    armBack: 'fallen_king_arm_front',
+    legFront: 'fallen_king_leg_front',
+    legBack: 'fallen_king_leg_back',
+    stanceLeg: 'fallen_king_leg_front',
+    weapon: 'fallen_king_weapon_hammer',
+    cape: 'fallen_king_cape',
   },
 };
 
@@ -192,6 +207,11 @@ export class PaperEnemyView {
     this.torso = scene.add.container(this.torsoBase.x, this.torsoBase.y);
     const torsoArt = this.assetImage(rigAssets?.torso, torsoHalfH * 2.24);
     const torsoParts: Phaser.GameObjects.GameObject[] = [];
+    const capeArt = this.assetImage(rigAssets?.cape, torsoHalfH * 2.5);
+    if (capeArt) {
+      capeArt.setPosition(0, torsoHalfH * 0.24);
+      torsoParts.push(capeArt);
+    }
     if (torsoArt) {
       torsoParts.push(torsoArt);
     } else {
