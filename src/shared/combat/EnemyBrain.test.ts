@@ -397,3 +397,86 @@ describe('EnemyBrain lockdown notifications', () => {
     expect(brain.isDead()).toBe(true);
   });
 });
+
+describe('EnemyBrain combo chains', () => {
+  const COMBO_SLASH: EnemyAttackDefinition = {
+    id: 'combo-slash',
+    style: 'slash',
+    telegraphMs: 1000,
+    damage: 10,
+    recoverMs: 500,
+    counterGuardDamage: 20,
+    weight: 100,
+    comboFollowUp: { attackId: 'follow-jab', chance: 0.5 },
+  };
+  const FOLLOW_JAB: EnemyAttackDefinition = {
+    id: 'follow-jab',
+    style: 'thrust',
+    telegraphMs: 300,
+    damage: 6,
+    recoverMs: 400,
+    counterGuardDamage: 10,
+    weight: 0,
+  };
+  const comboDef = () =>
+    makeDef({ attack: 100, wait: 0 }, { attacks: [COMBO_SLASH, FOLLOW_JAB] });
+
+  it('chains straight into the follow-up with no recovery gap', () => {
+    const { events, log } = makeEvents();
+    // rng 0: decision -> attack, combo roll 0 < 0.5 -> always chain.
+    const brain = new EnemyBrain(comboDef(), events, () => 0, 0);
+
+    brain.update(500, ctx()); // telegraph combo-slash, impact at 1500
+    brain.update(1500, ctx()); // impact chains directly into follow-jab
+    expect(names(log)).toEqual([
+      'telegraphStart',
+      'attackImpact',
+      'telegraphStart',
+    ]);
+    const followUp = log[2]!.args[0] as EnemyAttackDefinition;
+    expect(followUp.id).toBe('follow-jab');
+    expect(log[2]!.args[1]).toBe(1800); // impactAt = 1500 + 300
+    expect(brain.isTelegraphing()).toBe(true);
+
+    brain.update(1800, ctx()); // jab has no chain of its own -> recover
+    expect(names(log)).toEqual([
+      'telegraphStart',
+      'attackImpact',
+      'telegraphStart',
+      'attackImpact',
+      'recoverStart',
+    ]);
+  });
+
+  it('recovers normally when the combo roll fails', () => {
+    const { events, log } = makeEvents();
+    // rng 0.99: still picks attack (only weighted option), combo roll fails.
+    const brain = new EnemyBrain(comboDef(), events, () => 0.99, 0);
+
+    brain.update(500, ctx());
+    brain.update(1500, ctx());
+    expect(names(log)).toEqual([
+      'telegraphStart',
+      'attackImpact',
+      'recoverStart',
+    ]);
+  });
+
+  it('a perfect counter during the follow-up breaks the string', () => {
+    const { events, log } = makeEvents();
+    const brain = new EnemyBrain(comboDef(), events, () => 0, 0);
+
+    brain.update(500, ctx());
+    brain.update(1500, ctx()); // chained follow-jab telegraphing
+    brain.notifyCountered(1600);
+    expect(brain.isVulnerable()).toBe(true);
+
+    brain.update(1800, ctx()); // former impact time: nothing must land
+    expect(names(log)).toEqual([
+      'telegraphStart',
+      'attackImpact',
+      'telegraphStart',
+      'staggerStart',
+    ]);
+  });
+});

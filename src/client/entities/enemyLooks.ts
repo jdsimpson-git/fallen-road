@@ -54,6 +54,16 @@ export const ENEMY_LOOKS: Record<string, EnemyLook> = {
     bladeLength: 118,
     face: 'visor',
   },
+  // No shield look: the King's torso art carries his off-hand, so no guard
+  // arm is built — he answers pressure with combos and the royal riposte.
+  'fallen-king': {
+    body: 0x2b2140,
+    armor: 0x191330,
+    accent: 0x8fd8ff,
+    weapon: 'sword',
+    bladeLength: 126,
+    face: 'visor',
+  },
 };
 
 export const DEFAULT_LOOK: EnemyLook = ENEMY_LOOKS['road-soldier']!;

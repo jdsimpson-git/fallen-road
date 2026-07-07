@@ -140,12 +140,18 @@ export class EnemyBrain {
         const attack = this.currentAttack;
         this.currentAttack = null;
         this.events.onAttackImpact(attack);
-        this.enter(
-          'recover',
-          now,
-          this.scaled(attack.recoverMs, now) * this.recoverMultiplier
-        );
-        this.events.onRecoverStart();
+        const followUp = this.rollComboFollowUp(attack);
+        if (followUp) {
+          // Chain straight into the next swing — no recovery gap.
+          this.beginTelegraph(followUp, now);
+        } else {
+          this.enter(
+            'recover',
+            now,
+            this.scaled(attack.recoverMs, now) * this.recoverMultiplier
+          );
+          this.events.onRecoverStart();
+        }
       }
       return;
     }
@@ -308,6 +314,14 @@ export class EnemyBrain {
   private rollDecisionDelay(): number {
     const [min, max] = this.def.behavior.decisionIntervalMs;
     return min + this.rng() * (max - min);
+  }
+
+  private rollComboFollowUp(
+    attack: EnemyAttackDefinition
+  ): EnemyAttackDefinition | null {
+    const combo = attack.comboFollowUp;
+    if (!combo || this.rng() >= combo.chance) return null;
+    return this.def.attacks.find((a) => a.id === combo.attackId) ?? null;
   }
 
   private beginTelegraph(attack: EnemyAttackDefinition, now: number): void {

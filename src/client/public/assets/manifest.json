@@ -2,6 +2,18 @@
   "images": [
     { "key": "sky_painting", "file": "sky_painting.png" },
     { "key": "dark_tower", "file": "dark_tower.png" },
+    { "key": "castle_gate", "file": "castle_gate.png" },
+    { "key": "castle_interior", "file": "castle_interior.png" },
+    { "key": "fallen_king_head", "file": "fallen_king_head.png" },
+    { "key": "fallen_king_torso", "file": "fallen_king_torso.png" },
+    { "key": "fallen_king_arm_front", "file": "fallen_king_arm_front.png" },
+    { "key": "fallen_king_leg_front", "file": "fallen_king_leg_front.png" },
+    { "key": "fallen_king_leg_back", "file": "fallen_king_leg_back.png" },
+    {
+      "key": "fallen_king_weapon_hammer",
+      "file": "fallen_king_weapon_hammer.png"
+    },
+    { "key": "fallen_king_cape", "file": "fallen_king_cape.png" },
     { "key": "pine_silhouette", "file": "pine_silhouette.png" },
     { "key": "fog_band", "file": "fog_band.png" },
     { "key": "fp_sword", "file": "fp_sword.png" },

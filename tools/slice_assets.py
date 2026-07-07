@@ -77,6 +77,7 @@ SPRITES = {
     "sky_painting": {"sheet": "assets2", "roi": [90, 88, 1036, 406], "opaque": True, "fit": (1280, 720)},
     "dark_tower": {"sheet": "assets2", "roi": [1092, 25, 1420, 470], "fit": (512, 640), "fit_height": 640},
     "pine_silhouette": {"sheet": "assets2", "roi": [40, 480, 245, 800], "fit": (256, 512)},
+    "castle_gate": {"sheet": "assets2", "roi": [968, 800, 1428, 1060], "fit": (960, 720)},
     "fog_band": {"sheet": "assets2", "roi": [415, 550, 915, 710], "fit": (1280, 256)},
     # --- assets3.png: Fallen Rival rig ---
     "fallen_rival_head": {"sheet": "assets3", "roi": [80, 160, 300, 480], "fit": (192, 192)},
@@ -108,6 +109,19 @@ SPRITES = {
     "road_soldier_leg_back": {"sheet": "assets5", "roi": [825, 600, 1040, 970], "fit": (160, 256)},
     "road_soldier_weapon": {"sheet": "assets5", "roi": [60, 420, 225, 980], "fit": (320, 128), "rotate": Image.Transpose.ROTATE_270},
     "road_soldier_shield": {"sheet": "assets5", "roi": [1100, 645, 1390, 950], "fit": (220, 220)},
+    # --- final_boss_king.png: Fallen King rig (throne-room boss) ---
+    # Torso art bakes in both hanging arms + the off-hand shield; the big
+    # lion-pauldron fist arm is the separately animated weapon arm.
+    "fallen_king_head": {"sheet": "final_boss_king", "roi": [40, 15, 305, 395], "fit": (256, 256)},
+    "fallen_king_torso": {"sheet": "final_boss_king", "roi": [318, 45, 918, 655], "fit": (460, 560)},
+    "fallen_king_arm_front": {"sheet": "final_boss_king", "roi": [10, 390, 330, 970], "fit": (280, 440)},
+    "fallen_king_leg_front": {"sheet": "final_boss_king", "roi": [425, 594, 650, 1065], "fit": (240, 380)},
+    # erase: the torso's baked-on hip shield dips into this leg's region
+    "fallen_king_leg_back": {"sheet": "final_boss_king", "roi": [655, 594, 884, 1065], "fit": (240, 380), "erase": [[782, 588, 890, 654]]},
+    "fallen_king_weapon_hammer": {"sheet": "final_boss_king", "roi": [925, 510, 1246, 1060], "fit": (560, 240), "rotate": Image.Transpose.ROTATE_270},
+    "fallen_king_cape": {"sheet": "final_boss_king", "roi": [945, 20, 1435, 510], "fit": (500, 520)},
+    # --- inside_castle.png: throne-room backdrop (opaque crop inside frame) ---
+    "castle_interior": {"sheet": "inside_castle", "roi": [62, 42, 1398, 456], "opaque": True, "fit": (1400, 720)},
     # --- assets6.png: UI + VFX ---
     "ui_heart_full": {"sheet": "assets6", "roi": [70, 40, 275, 240], "fit": (64, 64)},
     "ui_heart_empty": {"sheet": "assets6", "roi": [300, 40, 505, 240], "fit": (64, 64), "all_neutral": True},

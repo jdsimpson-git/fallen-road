@@ -6,6 +6,16 @@ import { addPaperOverlays } from './paperShapes';
 export const HORIZON_Y = 460;
 
 /**
+ * Backdrop pieces the battle scene animates as the run progresses: the tower
+ * swells while fights are won, then the castle gate fades in for the boss.
+ * Either handle is null when its art wasn't supplied (procedural fallback).
+ */
+export type BackdropHandles = {
+  tower: Phaser.GameObjects.Image | null;
+  gate: Phaser.GameObjects.Image | null;
+};
+
+/**
  * A solid pine-tree silhouette centered on its trunk base at (0, 0).
  * Supplied 'pine_silhouette' art (normalized to `height`) replaces the
  * procedural shape; a container keeps caller scaling identical for both
@@ -170,7 +180,7 @@ export const spawnRoadsideDrift = (scene: Phaser.Scene): void => {
  * dying sun, far hills, the tower, flanking tree lines, ground, the road
  * (which ends at the tower gate), near trees, fog, and embers.
  */
-export const buildBackdrop = (scene: Phaser.Scene): void => {
+export const buildBackdrop = (scene: Phaser.Scene): BackdropHandles => {
   // Sky. Painted art covers the band above the horizon at its own aspect
   // (sides crop); the procedural gradient stretches over the full screen.
   if (scene.registry.get('skyIsArt') === true) {
@@ -209,14 +219,25 @@ export const buildBackdrop = (scene: Phaser.Scene): void => {
   hills.fillPath();
 
   // Supplied tower art sits with its base on the horizon; else the drawn one.
+  let tower: Phaser.GameObjects.Image | null = null;
   if (scene.textures.exists('dark_tower')) {
-    scene.add
+    tower = scene.add
       .image(640, HORIZON_Y + 4, 'dark_tower')
       .setOrigin(0.5, 1)
       .setScale(0.38)
       .setAlpha(0.88);
   } else {
     darkTower(scene);
+  }
+
+  // The castle gate waits invisible at the road's end until the boss approach.
+  let gate: Phaser.GameObjects.Image | null = null;
+  if (scene.textures.exists('castle_gate')) {
+    gate = scene.add
+      .image(640, HORIZON_Y + 4, 'castle_gate')
+      .setOrigin(0.5, 1)
+      .setAlpha(0);
+    gate.setScale(620 / gate.width);
   }
 
   // Tree lines flank the road corridor — never under it.
@@ -281,4 +302,48 @@ export const buildBackdrop = (scene: Phaser.Scene): void => {
 
   // Film finish.
   addPaperOverlays(scene);
+
+  return { tower, gate };
+};
+
+/**
+ * Inside the castle: the painted throne room covers the whole view (sides
+ * crop at its native aspect), with warm brazier glows pulsing for life.
+ * Fallback is a bare dark hall so a missing painting never blocks the boss.
+ */
+export const buildCastleBackdrop = (scene: Phaser.Scene): BackdropHandles => {
+  if (scene.textures.exists('castle_interior')) {
+    const frame = scene.textures.getFrame('castle_interior');
+    const cover = Math.max(1280 / frame.width, 720 / frame.height);
+    scene.add
+      .image(640, 360, 'castle_interior')
+      .setDisplaySize(frame.width * cover, frame.height * cover);
+  } else {
+    scene.add.rectangle(640, 360, 1280, 720, 0x171223);
+    scene.add.rectangle(640, 620, 1280, 200, 0x241c33);
+  }
+
+  // Firelight breathing over the hall.
+  for (const [bx, by] of [
+    [305, 330],
+    [975, 330],
+  ] as const) {
+    const glow = scene.add
+      .ellipse(bx, by, 220, 260, PAPER.ember, 0.1)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    scene.tweens.add({
+      targets: glow,
+      alpha: { from: 0.55, to: 1 },
+      scaleX: { from: 0.92, to: 1.06 },
+      scaleY: { from: 0.92, to: 1.06 },
+      duration: 1700 + Math.random() * 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+  startEmbers(scene);
+
+  addPaperOverlays(scene);
+  return { tower: null, gate: null };
 };

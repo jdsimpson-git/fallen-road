@@ -96,7 +96,10 @@ export class HomeScene extends Phaser.Scene {
     begin.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OUT, () =>
       begin.setStrokeStyle(3, PAPER.burst, 0.9)
     );
-    begin.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () => this.scene.start('Battle'));
+    begin.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, () =>
+      // Explicit stage: Phaser reuses stale scene data when none is passed.
+      this.scene.start('Battle', { stage: 'road' })
+    );
 
     this.add
       .text(640, 530, 'Walk until the road claims you. Every foe felled lights another window.', {
