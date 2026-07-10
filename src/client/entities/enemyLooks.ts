@@ -11,7 +11,7 @@ export type EnemyLook = {
   accent: number;
   /** Omitted = no shield arm (the Duelist fights open-handed). */
   shield?: EnemyShieldLook;
-  weapon: 'sword' | 'rapier';
+  weapon: 'sword' | 'rapier' | 'mace' | 'dagger';
   /** Blade length in px. */
   bladeLength: number;
   /** Helmet silhouette drawn on the head. */
@@ -45,6 +45,40 @@ export const ENEMY_LOOKS: Record<string, EnemyLook> = {
     bladeLength: 112,
     face: 'duelist',
   },
+  'spear-wraith': {
+    body: 0x30485a,
+    armor: 0x1d2d3d,
+    accent: 0x8fd8ff,
+    weapon: 'rapier',
+    bladeLength: 120,
+    face: 'duelist',
+  },
+  'bell-templar': {
+    body: 0x4b3b3f,
+    armor: 0x2b2027,
+    accent: 0xffca6a,
+    shield: { shape: 'tower', width: 84, height: 138, color: 0x33252d },
+    weapon: 'mace',
+    bladeLength: 88,
+    face: 'visor',
+  },
+  'cinder-reaver': {
+    body: 0x5b2930,
+    armor: 0x30161e,
+    accent: 0xff6b45,
+    weapon: 'dagger',
+    bladeLength: 104,
+    face: 'soldier',
+  },
+  'fallen-rival': {
+    body: 0x38435c,
+    armor: 0x202a42,
+    accent: 0x8fd8ff,
+    shield: { shape: 'round', radius: 34, color: 0x26334e },
+    weapon: 'rapier',
+    bladeLength: 112,
+    face: 'duelist',
+  },
   gatekeeper: {
     body: 0x2f2344,
     armor: 0x1c1430,
@@ -60,6 +94,7 @@ export const ENEMY_LOOKS: Record<string, EnemyLook> = {
     body: 0x2b2140,
     armor: 0x191330,
     accent: 0x8fd8ff,
+    shield: { shape: 'tower', width: 108, height: 176, color: 0x1f1a31 },
     weapon: 'sword',
     bladeLength: 126,
     face: 'visor',

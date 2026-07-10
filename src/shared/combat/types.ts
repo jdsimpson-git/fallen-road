@@ -85,6 +85,8 @@ export type DefenseInput = {
 export type DefenseOutcome = 'counter' | 'block' | 'hit';
 
 export type DodgeState = {
+  /** Timestamp when the current or most recent dodge began. */
+  startedAt: number;
   /** Timestamp until which the dodge grants evasion frames. 0 = idle. */
   activeUntil: number;
   /** Timestamp when the next dodge may begin. */

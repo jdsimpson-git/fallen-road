@@ -4,7 +4,11 @@
 
 A first-person, paper-diorama roguelike built as a Reddit interactive post for the Reddit Hackathon. Players swipe to slash, block and perfect-counter enemy attacks, break guards, and unleash weapon bursts. The full design lives in [Fallen_Road_Game_Design_Document.md](Fallen_Road_Game_Design_Document.md).
 
-**Current status: Phase 2+ — the continuous road.** One unbroken run: walk the twilight road toward the dark tower, and enemies step out of the fog one after another — the **Road Soldier** (basic block, slow slash), the **Shield Bearer** (directional center/high guards with gaps, shield bash, vulnerable weapon hand and legs), and the **Duelist** (bob-and-weave, sidesteps, a blue-ring counter stance that parries and ripostes, and an enrage phase below 30% health) — cycling until the road claims you. Health persists between fights (+18 on each kill). All enemies adapt to the player's recent habits with hard caps so they stay beatable; leg hits slow, weapon-hand hits can interrupt telegraphs. The look is a dusk-silhouette diorama: gradient sky, ember horizon, black pine lines, glowing-eyed foes, film grain. Merchants, Gambits, daily seeds, leaderboards, and the Fallen Rival system are intentionally not implemented yet.
+**Current status: Hackathon release candidate.** One run carries the player through four road fights, the Gatekeeper, and the Fallen King. Two three-way Gambit rewards, a final pre-throne choice, and two themed Paper Peddler stops shape a build from 15 Gambits and five weapons: **Paper Sword**, **Paper Spear**, **Paper Hammer**, **Paper Daggers**, and **Paper Mace**. Every weapon has its own attack rhythm and Burst. Health persists between fights (+18 on each kill); Gambits alter counter pressure, guard capacity, recovery, healing, Burst gain, and Burst damage.
+
+Six adaptive road archetypes now fill the daily pool: **Road Soldier**, **Shield Bearer**, **Duelist**, **Spear Wraith**, **Bell Templar**, and **Cinder Reaver**. Leg hits slow, weapon-hand hits interrupt telegraphs, and the three final archetypes use dedicated painted paper-puppet rigs. Runtime art is kept near 2 MB while full-resolution generated sources remain under `assets/` for future reslicing.
+
+Every ranked daily run receives the same UTC-seeded road order, Gambit deck, and enemy RNG. The Devvit server issues a short-lived, user-bound run ticket, recomputes scores, retains each traveller's best score in a Redis leaderboard, and shows the top three on Home. A daily defeat preserves a compact weapon/Gambit snapshot as a **Fallen Rival**; another traveller can choose an unranked revenge duel from Home without changing competitive daily scores.
 
 ## Stack
 
@@ -58,8 +62,9 @@ gracefully.
   staggers the soldier, damages his guard, and grants a large burst chunk.
 - **Guard break** — both sides. An emptied guard meter means seconds of
   crumpled, defenseless paper.
-- **Burst** — fill the meter, then press BURST (or Q) for the five-hit
-  Paper-Rending Combo.
+- **Burst** — fill the meter, then press BURST (or Q). Sword flurries, spear
+  thrusts, hammer guard-breaks, dagger storms, and mace impacts each behave
+  and animate differently.
 - The soldier telegraphs, blocks, side-steps, recovers, and can be
   guard-broken; fell him for victory, or die and rise again.
 
@@ -75,6 +80,7 @@ src/
                      # EnemyBrain (time-driven FSM with phases + counter stance),
                      # pattern tracking + capped adaptation, directional guard
     api.ts           # Zod schemas for /api contracts
+    run/             # immutable run state, seeded daily generation, scoring
   client/
     game.ts          # Phaser config (1280x720 FIT)
     scenes/          # Boot -> Preloader -> Home (foe select) -> Battle
@@ -83,7 +89,7 @@ src/
     ui/              # Hud, backdrop, effects, theme
   server/
     index.ts         # Hono app
-    routes/api.ts    # /api/init, /api/victory (Zod-validated, Redis-backed)
+    routes/api.ts    # init, daily tickets/scores/leaderboard, Fallen Rival routes
 ```
 
 Design rules enforced in code:
@@ -97,7 +103,7 @@ Design rules enforced in code:
 
 ## Testing
 
-`npm test` — 83 tests covering gesture classification (distance / duration /
+`npm test` — 118 tests covering gesture classification (distance / duration /
 velocity thresholds, 8-direction classification, heavy detection, taps),
 segment-vs-circle/rect hit detection and zone priority, damage and block
 math, guard damage / break / regeneration timing, perfect-counter windows,
@@ -109,8 +115,8 @@ interrupts, slows, phase transitions, burst lockdown).
 ## Roadmap (per the design document)
 
 1. ~~Combat vertical slice~~
-2. ~~Enemy variety: player-pattern adaptation, Shield Bearer, Duelist, phase framework~~ ← **you are here**
-3. Weapons (spear, hammer), elemental affixes, statuses, Gambits, reward & merchant scenes; the Gatekeeper boss on the phase framework
-4. Full run structure, tutorial, travel, results & scoring
-5. Server-issued daily seed, leaderboards, run validation, **Fallen Rival system**
-6. Art & audio pass, mobile polish, submission
+2. ~~Enemy variety: player-pattern adaptation, Shield Bearer, Duelist, phase framework~~
+3. ~~Weapons (spear, hammer), Gambits, reward & merchant scenes; the Gatekeeper boss on the phase framework~~
+4. ~~Full run structure, tutorial, travel, results & scoring~~
+5. ~~Server-issued daily seed, leaderboards, run validation, **Fallen Rival system**~~ ← **you are here**
+6. ~~Painted enemy/weapon art, mobile polish, submission verification~~

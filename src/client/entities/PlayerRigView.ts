@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { WEAPON_IDS, type WeaponId } from '../../shared/balance/weapons';
 import type { SwipeDirection } from '../../shared/combat/types';
 import { PAPER } from '../ui/theme';
 import { paperRect } from '../ui/paperShapes';
@@ -31,16 +32,28 @@ export class PlayerRigView {
   private readonly sword: Phaser.GameObjects.Container;
   private readonly shield: Phaser.GameObjects.Container;
   private readonly shieldRim: Phaser.GameObjects.Arc;
+  private readonly weaponArt: Record<
+    WeaponId,
+    Phaser.GameObjects.Image | undefined
+  > = {
+    sword: undefined,
+    spear: undefined,
+    hammer: undefined,
+    dagger: undefined,
+    mace: undefined,
+  };
   private swordBusy = false;
 
   constructor(private readonly scene: Phaser.Scene) {
-    // Sword: supplied sprite art when present, procedural silhouette otherwise.
+    // Weapon: supplied sprite art when present, procedural sword otherwise.
     this.sword = scene.add.container(SWORD_REST.x, SWORD_REST.y);
-    if (scene.textures.exists('fp_sword')) {
-      // Art contract (ASSETS.md): blade points up, grip sits at 85% height.
-      const art = scene.add.image(0, 40, 'fp_sword').setOrigin(0.5, 0.85);
-      art.setScale(270 / art.height);
-      this.sword.add(art);
+    const hasSwordArt = this.addWeaponArt('sword', 'fp_sword');
+    this.addWeaponArt('spear', 'fp_spear');
+    this.addWeaponArt('hammer', 'fp_hammer');
+    this.addWeaponArt('dagger', 'fp_dagger');
+    this.addWeaponArt('mace', 'fp_mace');
+    if (hasSwordArt) {
+      this.setWeapon('sword');
     } else {
       const blade = paperRect(scene, 34, 230, PAPER.blade, {
         radius: { tl: 17, tr: 17, bl: 3, br: 3 },
@@ -117,6 +130,25 @@ export class PlayerRigView {
     this.shield.setDepth(51);
   }
 
+  /** Switch the visible first-person weapon after a merchant purchase. */
+  setWeapon(weaponId: WeaponId): void {
+    if (!this.weaponArt[weaponId]) return;
+    for (const id of WEAPON_IDS) {
+      this.weaponArt[id]?.setVisible(id === weaponId);
+    }
+  }
+
+  private addWeaponArt(weaponId: WeaponId, texture: string): boolean {
+    if (!this.scene.textures.exists(texture)) return false;
+    // Art contract: weapon points up and its grip sits at 85% of its height.
+    const art = this.scene.add.image(0, 40, texture).setOrigin(0.5, 0.85);
+    art.setScale(270 / art.height);
+    art.setVisible(false);
+    this.weaponArt[weaponId] = art;
+    this.sword.add(art);
+    return true;
+  }
+
   /**
    * Quick sidestep: the camera lurches aside while both hands dip. Purely
    * cosmetic — evasion frames are tracked in shared combat state.
@@ -162,6 +194,72 @@ export class PlayerRigView {
           y: SWORD_REST.y,
           angle: SWORD_REST.angle,
           duration: 200,
+          ease: 'Sine.easeInOut',
+          onComplete: () => {
+            this.swordBusy = false;
+          },
+        });
+      },
+    });
+  }
+
+  /** Weapon-specific Burst motion so every special reads at a glance. */
+  playBurst(weaponId: WeaponId, hitIndex: number): void {
+    if (weaponId === 'spear') {
+      this.animateWeaponTo(
+        { x: SWORD_REST.x - 330, y: SWORD_REST.y - 210, angle: -64 },
+        105,
+        165
+      );
+      return;
+    }
+    if (weaponId === 'hammer') {
+      this.animateWeaponTo(
+        { x: SWORD_REST.x - 210, y: SWORD_REST.y - 300, angle: -165 },
+        145,
+        230
+      );
+      return;
+    }
+    if (weaponId === 'dagger') {
+      const direction: SwipeDirection = hitIndex % 2 === 0 ? 'upLeft' : 'downRight';
+      this.swing(direction, false);
+      return;
+    }
+    if (weaponId === 'mace') {
+      const direction: SwipeDirection = hitIndex === 2 ? 'down' : 'left';
+      this.swing(direction, hitIndex === 2);
+      return;
+    }
+    const combo: readonly SwipeDirection[] = [
+      'left',
+      'downRight',
+      'right',
+      'downLeft',
+      'down',
+    ];
+    this.swing(combo[hitIndex % combo.length]!, false);
+  }
+
+  private animateWeaponTo(
+    target: { x: number; y: number; angle: number },
+    outMs: number,
+    returnMs: number
+  ): void {
+    this.scene.tweens.killTweensOf(this.sword);
+    this.swordBusy = true;
+    this.scene.tweens.add({
+      targets: this.sword,
+      ...target,
+      duration: outMs,
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        this.scene.tweens.add({
+          targets: this.sword,
+          x: SWORD_REST.x,
+          y: SWORD_REST.y,
+          angle: SWORD_REST.angle,
+          duration: returnMs,
           ease: 'Sine.easeInOut',
           onComplete: () => {
             this.swordBusy = false;

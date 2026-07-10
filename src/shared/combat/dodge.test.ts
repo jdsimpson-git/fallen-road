@@ -3,6 +3,7 @@ import {
   createDodgeState,
   dodgeReadyFraction,
   isDodgeActive,
+  isPerfectDodge,
   startDodge,
 } from './dodge';
 
@@ -39,6 +40,19 @@ describe('isDodgeActive', () => {
 
   it('is inactive on a fresh state', () => {
     expect(isDodgeActive(createDodgeState(), 0)).toBe(false);
+  });
+});
+
+describe('isPerfectDodge', () => {
+  it('turns a last-moment active dodge into a counter', () => {
+    const { state } = startDodge(createDodgeState(), 1000, TUNING);
+    expect(isPerfectDodge(state, 1120, 240)).toBe(true);
+  });
+
+  it('rejects dodges begun too early or after their active frames end', () => {
+    const { state } = startDodge(createDodgeState(), 1000, TUNING);
+    expect(isPerfectDodge(state, 1250, 240)).toBe(false);
+    expect(isPerfectDodge(state, 1400, 240)).toBe(false);
   });
 });
 

@@ -404,6 +404,288 @@ export const DUELIST: EnemyDefinition = {
   ],
 };
 
+/** A fast reach fighter: long thrust strings punish panic swipes and blocks. */
+export const SPEAR_WRAITH: EnemyDefinition = {
+  id: 'spear-wraith',
+  name: 'Spear Wraith',
+  tagline: 'A faded standard and a needle of cold iron.',
+  tier: 'advanced',
+  maxHealth: 76,
+  maxGuard: 46,
+  blockDamageReduction: 0.72,
+  guardBreakDurationMs: 2100,
+  guardBrokenDamageTakenMultiplier: 1.55,
+  staggerDurationMs: 850,
+  guardRegenPerSecond: 12,
+  guardRegenDelayMs: 900,
+  attacks: [
+    {
+      id: 'long-skewer',
+      style: 'thrust',
+      telegraphMs: 760,
+      damage: 18,
+      recoverMs: 650,
+      counterGuardDamage: 24,
+      weight: 62,
+      comboFollowUp: { attackId: 'withdrawal-cut', chance: 0.5 },
+    },
+    {
+      id: 'withdrawal-cut',
+      style: 'thrust',
+      telegraphMs: 420,
+      damage: 10,
+      recoverMs: 620,
+      counterGuardDamage: 16,
+      weight: 38,
+    },
+    {
+      id: 'wraith-riposte',
+      style: 'thrust',
+      telegraphMs: 360,
+      damage: 22,
+      recoverMs: 680,
+      counterGuardDamage: 18,
+      weight: 0,
+    },
+  ],
+  blockStances: [
+    {
+      id: 'spear-high',
+      weight: 100,
+      blockedZones: ['head'],
+      blockedDirections: ['up', 'upLeft', 'upRight'],
+      adaptToSignal: 'headRatio',
+    },
+  ],
+  counterStance: {
+    startupMs: 240,
+    activeMs: 420,
+    riposteAttackId: 'wraith-riposte',
+    cooldownMs: 3600,
+  },
+  behavior: {
+    decisionIntervalMs: [390, 700],
+    weights: { attack: 56, block: 10, dodge: 30, counter: 12, wait: 5 },
+    blockDurationMs: 680,
+    dodgeDurationMs: 510,
+    dodgeDistance: 130,
+    defensiveCooldownMs: 780,
+    headBob: { amplitudeX: 32, amplitudeY: 15, periodMs: 1500 },
+  },
+  adaptation: {
+    cap: 1.95,
+    blockingBoostsAttack: 0.55,
+    spamBoostsDodge: 0.65,
+    spamBoostsCounter: 0.55,
+    horizontalBoostsDodge: 0.7,
+    zoneFocusBoostsBlock: 0.45,
+  },
+  hitZones: [
+    { id: 'head', type: 'circle', radius: 30, attachTo: 'head' },
+    {
+      id: 'torso',
+      type: 'rect',
+      halfWidth: 48,
+      halfHeight: 68,
+      attachTo: 'torso',
+    },
+    { id: 'weaponHand', type: 'circle', radius: 25, attachTo: 'weaponHand' },
+    {
+      id: 'legs',
+      type: 'rect',
+      halfWidth: 48,
+      halfHeight: 36,
+      attachTo: 'legs',
+    },
+  ],
+};
+
+/** A slow wall whose shield slams turn greed into a guard-management test. */
+export const BELL_TEMPLAR: EnemyDefinition = {
+  id: 'bell-templar',
+  name: 'Bell Templar',
+  tagline: 'Its shield tolls once for every careless blow.',
+  tier: 'elite',
+  maxHealth: 126,
+  maxGuard: 120,
+  blockDamageReduction: 0.88,
+  guardBreakDurationMs: 2800,
+  guardBrokenDamageTakenMultiplier: 1.65,
+  staggerDurationMs: 950,
+  guardRegenPerSecond: 15,
+  guardRegenDelayMs: 1050,
+  attacks: [
+    {
+      id: 'bell-slam',
+      style: 'bash',
+      telegraphMs: 940,
+      damage: 24,
+      recoverMs: 920,
+      counterGuardDamage: 36,
+      weight: 52,
+      comboFollowUp: { attackId: 'temple-cut', chance: 0.3 },
+    },
+    {
+      id: 'temple-cut',
+      style: 'slash',
+      telegraphMs: 620,
+      damage: 16,
+      recoverMs: 700,
+      counterGuardDamage: 24,
+      weight: 48,
+    },
+  ],
+  blockStances: [
+    {
+      id: 'bell-wall',
+      weight: 70,
+      blockedZones: ['torso', 'legs'],
+      blockedDirections: ['left', 'right', 'down', 'downLeft', 'downRight'],
+      adaptToSignal: 'torsoRatio',
+    },
+    {
+      id: 'bell-crown',
+      weight: 30,
+      blockedZones: ['head'],
+      blockedDirections: ['up', 'upLeft', 'upRight'],
+      adaptToSignal: 'headRatio',
+    },
+  ],
+  phases: [
+    {
+      id: 'resonance',
+      healthFractionBelow: 0.5,
+      telegraphSpeedMultiplier: 0.82,
+      weightOverrides: { attack: 65, block: 25, wait: 4 },
+    },
+  ],
+  behavior: {
+    decisionIntervalMs: [560, 980],
+    weights: { attack: 50, block: 38, dodge: 0, counter: 0, wait: 12 },
+    blockDurationMs: 1450,
+    dodgeDurationMs: 0,
+    dodgeDistance: 0,
+    defensiveCooldownMs: 1150,
+    headBob: { amplitudeX: 10, amplitudeY: 5, periodMs: 2500 },
+  },
+  adaptation: {
+    cap: 1.8,
+    blockingBoostsAttack: 0.7,
+    spamBoostsDodge: 0,
+    spamBoostsCounter: 0,
+    horizontalBoostsDodge: 0,
+    zoneFocusBoostsBlock: 0.75,
+  },
+  hitZones: [
+    { id: 'head', type: 'circle', radius: 33, attachTo: 'head' },
+    {
+      id: 'torso',
+      type: 'rect',
+      halfWidth: 68,
+      halfHeight: 88,
+      attachTo: 'torso',
+    },
+    { id: 'weaponHand', type: 'circle', radius: 25, attachTo: 'weaponHand' },
+    {
+      id: 'legs',
+      type: 'rect',
+      halfWidth: 50,
+      halfHeight: 38,
+      attachTo: 'legs',
+    },
+  ],
+};
+
+/** A low-guard berserker that accelerates into a three-hit frenzy when hurt. */
+export const CINDER_REAVER: EnemyDefinition = {
+  id: 'cinder-reaver',
+  name: 'Cinder Reaver',
+  tagline: 'A scorched blade that gets faster as it comes apart.',
+  tier: 'elite',
+  maxHealth: 98,
+  maxGuard: 42,
+  blockDamageReduction: 0.68,
+  guardBreakDurationMs: 2000,
+  guardBrokenDamageTakenMultiplier: 1.55,
+  staggerDurationMs: 800,
+  guardRegenPerSecond: 9,
+  guardRegenDelayMs: 850,
+  attacks: [
+    {
+      id: 'ember-cleave',
+      style: 'slash',
+      telegraphMs: 640,
+      damage: 19,
+      recoverMs: 580,
+      counterGuardDamage: 22,
+      weight: 58,
+      comboFollowUp: { attackId: 'ash-cut', chance: 0.6 },
+    },
+    {
+      id: 'ash-cut',
+      style: 'slash',
+      telegraphMs: 390,
+      damage: 11,
+      recoverMs: 500,
+      counterGuardDamage: 16,
+      weight: 42,
+      comboFollowUp: { attackId: 'ash-cut', chance: 0.25 },
+    },
+  ],
+  blockStances: [
+    {
+      id: 'reaver-center',
+      weight: 100,
+      blockedZones: ['torso'],
+      blockedDirections: ['left', 'right'],
+    },
+  ],
+  phases: [
+    {
+      id: 'cinder-frenzy',
+      healthFractionBelow: 0.45,
+      telegraphSpeedMultiplier: 0.68,
+      recoverMultiplier: 0.72,
+      weightOverrides: { attack: 72, dodge: 18, block: 4, wait: 2 },
+    },
+  ],
+  behavior: {
+    decisionIntervalMs: [350, 660],
+    weights: { attack: 58, block: 12, dodge: 25, counter: 0, wait: 5 },
+    blockDurationMs: 620,
+    dodgeDurationMs: 450,
+    dodgeDistance: 105,
+    defensiveCooldownMs: 760,
+    headBob: { amplitudeX: 30, amplitudeY: 14, periodMs: 1450 },
+  },
+  adaptation: {
+    cap: 2,
+    blockingBoostsAttack: 0.65,
+    spamBoostsDodge: 0.55,
+    spamBoostsCounter: 0,
+    horizontalBoostsDodge: 0.55,
+    zoneFocusBoostsBlock: 0.25,
+  },
+  hitZones: [
+    { id: 'head', type: 'circle', radius: 31, attachTo: 'head' },
+    {
+      id: 'torso',
+      type: 'rect',
+      halfWidth: 54,
+      halfHeight: 72,
+      attachTo: 'torso',
+    },
+    { id: 'weaponHand', type: 'circle', radius: 24, attachTo: 'weaponHand' },
+    {
+      id: 'legs',
+      type: 'rect',
+      halfWidth: 48,
+      halfHeight: 35,
+      attachTo: 'legs',
+    },
+  ],
+};
+
 export const GATEKEEPER: EnemyDefinition = {
   id: 'gatekeeper',
   name: 'The Gatekeeper',
@@ -675,16 +957,37 @@ export const ENEMIES: Record<string, EnemyDefinition> = {
   [ROAD_SOLDIER.id]: ROAD_SOLDIER,
   [SHIELD_BEARER.id]: SHIELD_BEARER,
   [DUELIST.id]: DUELIST,
+  [SPEAR_WRAITH.id]: SPEAR_WRAITH,
+  [BELL_TEMPLAR.id]: BELL_TEMPLAR,
+  [CINDER_REAVER.id]: CINDER_REAVER,
   [GATEKEEPER.id]: GATEKEEPER,
   [FALLEN_KING.id]: FALLEN_KING,
 };
 
-/** Encounter order cycled on the road before the castle gates. */
+/** A compact four-fight road before the Gatekeeper bars the way. */
+export const ROAD_FIGHTS_BEFORE_BOSS = 4;
+
+/** Pool sampled by both the daily generator and unranked road builder. */
 export const GAUNTLET_ORDER: readonly string[] = [
   ROAD_SOLDIER.id,
   SHIELD_BEARER.id,
   DUELIST.id,
+  SPEAR_WRAITH.id,
+  BELL_TEMPLAR.id,
+  CINDER_REAVER.id,
 ];
 
-/** Road fights survived before the Gatekeeper bars the way. */
-export const ROAD_FIGHTS_BEFORE_BOSS = 6;
+/** Fresh unranked roads draw without repetition before cycling the full pool. */
+export const randomizedRoadRoute = (random: () => number): readonly string[] => {
+  const pool = [...GAUNTLET_ORDER];
+  for (let index = pool.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    const current = pool[index];
+    pool[index] = pool[swapIndex]!;
+    pool[swapIndex] = current!;
+  }
+  return Array.from(
+    { length: ROAD_FIGHTS_BEFORE_BOSS },
+    (_, index) => pool[index % pool.length]!
+  );
+};

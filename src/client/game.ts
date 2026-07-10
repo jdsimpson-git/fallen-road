@@ -4,6 +4,7 @@ import { BootScene } from './scenes/BootScene';
 import { PreloaderScene } from './scenes/PreloaderScene';
 import { HomeScene } from './scenes/HomeScene';
 import { BattleScene } from './scenes/BattleScene';
+import { RewardScene } from './scenes/RewardScene';
 
 /**
  * Fixed logical resolution of 1280x720, scaled to fit the web view while
@@ -24,7 +25,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 1280,
     height: 720,
   },
-  scene: [BootScene, PreloaderScene, HomeScene, BattleScene],
+  scene: [BootScene, PreloaderScene, HomeScene, BattleScene, RewardScene],
 };
 
 document.addEventListener('DOMContentLoaded', () => {

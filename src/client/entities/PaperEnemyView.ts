@@ -17,7 +17,7 @@ type EnemyRigAssets = {
   head: string;
   torso: string;
   armFront: string;
-  armBack: string;
+  armBack?: string;
   legFront: string;
   legBack: string;
   /**
@@ -30,6 +30,16 @@ type EnemyRigAssets = {
   shield?: string;
   /** Optional cape layer rendered behind the torso, breathing with it. */
   cape?: string;
+  /** Per-rig joint tuning for art that is much larger than the base soldier. */
+  armFrontHeight?: number;
+  armFrontOffset?: { x: number; y: number };
+  armFrontFlipX?: boolean;
+  handOffset?: { x: number; y: number };
+  weaponAnchor?: { x: number; y: number };
+  weaponLength?: number;
+  weaponTip?: { x: number; y: number };
+  armBackHeight?: number;
+  armBackOffset?: { x: number; y: number };
 };
 
 const ENEMY_RIG_ASSETS: Record<string, EnemyRigAssets> = {
@@ -66,28 +76,84 @@ const ENEMY_RIG_ASSETS: Record<string, EnemyRigAssets> = {
     weapon: 'fallen_rival_weapon_frost_spear',
     shield: 'fallen_rival_shield',
   },
+  'fallen-rival': {
+    head: 'fallen_rival_head',
+    torso: 'fallen_rival_torso',
+    armFront: 'fallen_rival_arm_front',
+    armBack: 'fallen_rival_arm_back',
+    legFront: 'fallen_rival_leg_front',
+    legBack: 'fallen_rival_leg_back',
+    stanceLeg: 'fallen_rival_leg_front',
+    weapon: 'fallen_rival_weapon_frost_spear',
+    shield: 'fallen_rival_shield',
+  },
+  'spear-wraith': {
+    head: 'spear_wraith_head',
+    torso: 'spear_wraith_torso',
+    armFront: 'spear_wraith_arm_front',
+    armBack: 'spear_wraith_arm_back',
+    legFront: 'spear_wraith_leg_front',
+    legBack: 'spear_wraith_leg_back',
+    stanceLeg: 'spear_wraith_leg_front',
+    weapon: 'spear_wraith_weapon',
+  },
+  'bell-templar': {
+    head: 'bell_templar_head',
+    torso: 'bell_templar_torso',
+    armFront: 'bell_templar_arm_front',
+    armBack: 'bell_templar_arm_back',
+    legFront: 'bell_templar_leg_front',
+    legBack: 'bell_templar_leg_back',
+    stanceLeg: 'bell_templar_leg_front',
+    weapon: 'bell_templar_weapon',
+    armBackHeight: 145,
+  },
+  'cinder-reaver': {
+    head: 'cinder_reaver_head',
+    torso: 'cinder_reaver_torso',
+    armFront: 'cinder_reaver_arm_front',
+    armBack: 'cinder_reaver_arm_back',
+    legFront: 'cinder_reaver_leg_front',
+    legBack: 'cinder_reaver_leg_back',
+    stanceLeg: 'cinder_reaver_leg_front',
+    weapon: 'cinder_reaver_weapon',
+  },
   gatekeeper: {
     head: 'warden_king_head',
     torso: 'warden_king_torso',
-    armFront: 'warden_king_arm_front',
+    armFront: 'gatekeeper_arm_front_v2',
     armBack: 'warden_king_arm_back',
     legFront: 'warden_king_leg_front',
     legBack: 'warden_king_leg_back',
     stanceLeg: 'warden_king_leg_back',
-    weapon: 'warden_king_weapon_hammer',
+    weapon: 'gatekeeper_weapon_hammer_v2',
+    cape: 'warden_king_cape',
+    armFrontHeight: 172,
+    armFrontOffset: { x: 2, y: 0 },
+    armFrontFlipX: true,
+    handOffset: { x: 2, y: 76 },
+    weaponAnchor: { x: 4, y: 66 },
+    weaponLength: 150,
+    weaponTip: { x: 8, y: -62 },
+    armBackHeight: 178,
+    armBackOffset: { x: 2, y: 6 },
   },
   'fallen-king': {
     head: 'fallen_king_head',
     torso: 'fallen_king_torso',
-    armFront: 'fallen_king_arm_front',
-    // The torso art bakes in the off-hand and hip shield; no shield arm is
-    // built (the look omits `shield`), so armBack never renders.
-    armBack: 'fallen_king_arm_front',
+    armFront: 'fallen_king_arm_front_v2',
     legFront: 'fallen_king_leg_front',
     legBack: 'fallen_king_leg_back',
     stanceLeg: 'fallen_king_leg_front',
-    weapon: 'fallen_king_weapon_hammer',
+    weapon: 'fallen_king_weapon_hammer_v2',
+    shield: 'fallen_king_shield_arm_v2',
     cape: 'fallen_king_cape',
+    armFrontHeight: 220,
+    armFrontOffset: { x: 4, y: 2 },
+    handOffset: { x: 6, y: 101 },
+    weaponAnchor: { x: 8, y: 92 },
+    weaponLength: 188,
+    weaponTip: { x: 8, y: -96 },
   },
 };
 
@@ -144,7 +210,7 @@ export class PaperEnemyView {
     const rigAssets = ENEMY_RIG_ASSETS[def.id] ?? null;
     this.look = look;
     this.baseX = x;
-    this.container = scene.add.container(x, y);
+    this.container = scene.add.container(x, y).setDepth(10);
 
     // Derive the skeleton from the combat hit zones.
     const headZone = def.hitZones.find((z) => z.attachTo === 'head');
@@ -270,25 +336,33 @@ export class PaperEnemyView {
       this.swordArmBase.x,
       this.swordArmBase.y
     );
-    const armArt = this.assetImage(rigAssets?.armFront, 64)?.setPosition(0, 10);
+    const armFrontOffset = rigAssets?.armFrontOffset ?? { x: 0, y: 10 };
+    const armArt = this.assetImage(
+      rigAssets?.armFront,
+      rigAssets?.armFrontHeight ?? 64
+    )?.setPosition(armFrontOffset.x, armFrontOffset.y);
+    armArt?.setFlipX(rigAssets?.armFrontFlipX === true);
     const arm =
       armArt ?? paperRect(scene, 22, 48, look.body, { radius: 10, ...RIM });
-    arm.setY(10);
+    arm.setPosition(armFrontOffset.x, armFrontOffset.y);
     // With painted arm art the gauntlet is the hand visual; keep the disc as
     // a faint hit-zone marker that brightens on weapon-hand hits.
     this.handRestAlpha = armArt ? 0.15 : 1;
+    const handOffset = rigAssets?.handOffset ?? { x: 6, y: 30 };
     this.hand = scene.add
-      .circle(6, 30, 12, look.body)
+      .circle(handOffset.x, handOffset.y, 12, look.body)
       .setStrokeStyle(2, PAPER.rim, 0.5)
       .setAlpha(this.handRestAlpha);
     const bladeWidth = look.weapon === 'rapier' ? 8 : 14;
+    const weaponAnchor = rigAssets?.weaponAnchor ?? { x: 8, y: 0 };
+    const weaponLength = rigAssets?.weaponLength ?? look.bladeLength;
     const weaponArt = this.assetImage(rigAssets?.weapon, bladeWidth * 5.5);
     let weapon: Phaser.GameObjects.GameObject;
     let glint: Phaser.GameObjects.Graphics | null = null;
     if (weaponArt) {
       weaponArt.setOrigin(0.12, 0.5);
-      weaponArt.setScale(look.bladeLength / weaponArt.width);
-      weaponArt.setPosition(8, 0);
+      weaponArt.setScale(weaponLength / weaponArt.width);
+      weaponArt.setPosition(weaponAnchor.x, weaponAnchor.y);
       weaponArt.setAngle(-90);
       weapon = weaponArt;
     } else {
@@ -303,7 +377,10 @@ export class PaperEnemyView {
           strokeColor: PAPER.rim,
         }
       );
-      blade.setPosition(8, -look.bladeLength / 2 - 4);
+      blade.setPosition(
+        weaponAnchor.x,
+        weaponAnchor.y - look.bladeLength / 2 - 4
+      );
       weapon = blade;
       // Glint line down the edge.
       glint = paperRect(scene, 2.5, look.bladeLength - 14, PAPER.bladeGlint, {
@@ -311,9 +388,15 @@ export class PaperEnemyView {
         strokeWidth: 0,
         fillAlpha: 0.55,
       });
-      glint.setPosition(8 + bladeWidth / 4, -look.bladeLength / 2 - 4);
+      glint.setPosition(
+        weaponAnchor.x + bladeWidth / 4,
+        weaponAnchor.y - look.bladeLength / 2 - 4
+      );
     }
-    this.weaponTipLocal = { x: 8, y: -look.bladeLength - 6 };
+    this.weaponTipLocal = rigAssets?.weaponTip ?? {
+      x: weaponAnchor.x,
+      y: weaponAnchor.y - look.bladeLength - 6,
+    };
     // Telegraph glow overlay.
     this.bladeGlow = overlayRect(
       scene,
@@ -322,7 +405,10 @@ export class PaperEnemyView {
       PAPER.counterCue,
       6
     );
-    this.bladeGlow.setPosition(8, -look.bladeLength / 2 - 4);
+    this.bladeGlow.setPosition(
+      weaponAnchor.x,
+      weaponAnchor.y - look.bladeLength / 2 - 4
+    );
     this.bladeGlow.setBlendMode(Phaser.BlendModes.ADD);
     const guard = paperRect(
       scene,
@@ -334,7 +420,7 @@ export class PaperEnemyView {
         strokeWidth: 0,
       }
     );
-    guard.setPosition(8, -2);
+    guard.setPosition(weaponAnchor.x, weaponAnchor.y - 2);
     const swordParts: Phaser.GameObjects.GameObject[] = [arm, weapon];
     if (glint) swordParts.push(glint);
     if (!weaponArt) swordParts.push(guard);
@@ -374,10 +460,11 @@ export class PaperEnemyView {
         // With no dedicated shield art the armored arm itself is the guard
         // visual (e.g. the Warden King's plated arm) — draw it shield-sized
         // instead of backing a flat procedural plate.
-        shieldArt ? 68 : shieldHeight * 1.15
+        shieldArt ? 68 : (rigAssets?.armBackHeight ?? shieldHeight * 1.15)
       );
       if (armBack) {
-        armBack.setPosition(2, 16);
+        const armBackOffset = rigAssets?.armBackOffset ?? { x: 2, y: 16 };
+        armBack.setPosition(armBackOffset.x, armBackOffset.y);
         shieldArm.add(armBack);
       }
       if (shieldArt || armBack) {

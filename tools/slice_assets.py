@@ -18,7 +18,8 @@ SRC = ROOT / "assets"
 DBG = Path(__file__).resolve().parent / "detected"
 DBG.mkdir(exist_ok=True)
 DEST = ROOT / "src" / "client" / "public" / "assets"
-INSTALL = "--install" in sys.argv
+INSTALL = "--install" in sys.argv or "--install-final" in sys.argv
+FINAL_ONLY = "--install-final" in sys.argv
 
 
 def flood_key(rgb: np.ndarray, all_neutral: bool = False) -> np.ndarray:
@@ -58,6 +59,47 @@ def flood_key(rgb: np.ndarray, all_neutral: bool = False) -> np.ndarray:
                 bg[ny, nx] = True
                 q.append((ny, nx))
     return ~bg
+
+
+def retain_largest_components(img: Image.Image, count: int = 1) -> Image.Image:
+    """Remove isolated chroma-removal flecks while preserving requested parts."""
+    pixels = np.asarray(img).copy()
+    alpha = pixels[:, :, 3] > 8
+    h, w = alpha.shape
+    seen = np.zeros((h, w), dtype=bool)
+    components = []
+    for y in range(h):
+        for x in range(w):
+            if not alpha[y, x] or seen[y, x]:
+                continue
+            component = []
+            q = deque([(y, x)])
+            seen[y, x] = True
+            while q:
+                cy, cx = q.popleft()
+                component.append((cy, cx))
+                for dy, dx in (
+                    (1, 0), (-1, 0), (0, 1), (0, -1),
+                    (1, 1), (1, -1), (-1, 1), (-1, -1),
+                ):
+                    ny, nx = cy + dy, cx + dx
+                    if (
+                        0 <= ny < h
+                        and 0 <= nx < w
+                        and alpha[ny, nx]
+                        and not seen[ny, nx]
+                    ):
+                        seen[ny, nx] = True
+                        q.append((ny, nx))
+            components.append(component)
+    keep = np.zeros((h, w), dtype=bool)
+    for component in sorted(components, key=len, reverse=True)[:count]:
+        for y, x in component:
+            keep[y, x] = True
+    pixels[~keep, 3] = 0
+    cleaned = Image.fromarray(pixels)
+    bbox = cleaned.getbbox()
+    return cleaned.crop(bbox) if bbox else cleaned
 
 
 # key -> spec. roi/erase in SHEET pixel coords.
@@ -122,6 +164,38 @@ SPRITES = {
     "fallen_king_cape": {"sheet": "final_boss_king", "roi": [945, 20, 1435, 510], "fit": (500, 520)},
     # --- inside_castle.png: throne-room backdrop (opaque crop inside frame) ---
     "castle_interior": {"sheet": "inside_castle", "roi": [62, 42, 1398, 456], "opaque": True, "fit": (1400, 720)},
+    # --- generated final-pass enemy rigs (already chroma-keyed to alpha) ---
+    "spear_wraith_head": {"sheet": "spear_wraith_sheet", "roi": [130, 15, 420, 380], "alpha": True, "fit": (192, 192)},
+    "spear_wraith_torso": {"sheet": "spear_wraith_sheet", "roi": [470, 20, 980, 440], "alpha": True, "fit": (280, 340)},
+    "spear_wraith_arm_front": {"sheet": "spear_wraith_sheet", "roi": [1000, 65, 1390, 385], "alpha": True, "fit": (180, 280)},
+    "spear_wraith_arm_back": {"sheet": "spear_wraith_sheet", "roi": [170, 400, 500, 850], "alpha": True, "fit": (180, 280)},
+    "spear_wraith_leg_front": {"sheet": "spear_wraith_sheet", "roi": [520, 430, 790, 870], "alpha": True, "fit": (170, 280)},
+    "spear_wraith_leg_back": {"sheet": "spear_wraith_sheet", "roi": [900, 420, 1190, 870], "alpha": True, "fit": (170, 280)},
+    "spear_wraith_weapon": {"sheet": "spear_wraith_sheet", "roi": [80, 860, 1360, 1045], "alpha": True, "fit": (420, 160)},
+    "bell_templar_head": {"sheet": "bell_templar_sheet", "roi": [110, 50, 390, 430], "alpha": True, "fit": (210, 210)},
+    "bell_templar_torso": {"sheet": "bell_templar_sheet", "roi": [420, 45, 860, 530], "alpha": True, "fit": (300, 360)},
+    "bell_templar_arm_front": {"sheet": "bell_templar_sheet", "roi": [850, 70, 1070, 500], "alpha": True, "fit": (190, 290)},
+    "bell_templar_arm_back": {"sheet": "bell_templar_sheet", "roi": [1040, 45, 1410, 540], "alpha": True, "fit": (260, 330)},
+    "bell_templar_leg_front": {"sheet": "bell_templar_sheet", "roi": [430, 525, 710, 1020], "alpha": True, "fit": (180, 290)},
+    "bell_templar_leg_back": {"sheet": "bell_templar_sheet", "roi": [750, 515, 1030, 1010], "alpha": True, "fit": (180, 290)},
+    "bell_templar_weapon": {"sheet": "bell_templar_sheet", "roi": [50, 555, 375, 970], "alpha": True, "fit": (390, 170), "pre_rotate_deg": -60},
+    "cinder_reaver_head": {"sheet": "cinder_reaver_sheet", "roi": [170, 50, 460, 420], "alpha": True, "fit": (192, 192)},
+    "cinder_reaver_torso": {"sheet": "cinder_reaver_sheet", "roi": [530, 40, 960, 520], "alpha": True, "fit": (280, 340)},
+    "cinder_reaver_arm_front": {"sheet": "cinder_reaver_sheet", "roi": [960, 60, 1320, 460], "alpha": True, "fit": (180, 280)},
+    "cinder_reaver_arm_back": {"sheet": "cinder_reaver_sheet", "roi": [160, 440, 480, 840], "alpha": True, "fit": (180, 280)},
+    "cinder_reaver_leg_front": {"sheet": "cinder_reaver_sheet", "roi": [480, 440, 750, 860], "alpha": True, "fit": (170, 280)},
+    "cinder_reaver_leg_back": {"sheet": "cinder_reaver_sheet", "roi": [810, 440, 1100, 870], "alpha": True, "fit": (170, 280)},
+    "cinder_reaver_weapon": {"sheet": "cinder_reaver_sheet", "roi": [220, 860, 1210, 1050], "alpha": True, "keep_components": 2, "fit": (420, 160)},
+    # Player weapon sources are kept at generation fidelity; install resizes them.
+    "fp_dagger": {"sheet": "fp_dagger_source", "roi": [0, 0, 941, 1672], "alpha": True, "fit": (512, 768)},
+    "fp_mace": {"sheet": "fp_mace_source", "roi": [0, 0, 864, 1821], "alpha": True, "fit": (512, 768)},
+    "fp_spear": {"sheet": "final_generated_sources/fp_spear", "roi": [0, 0, 929, 1694], "alpha": True, "fit": (512, 768)},
+    "fp_hammer": {"sheet": "final_generated_sources/fp_hammer", "roi": [0, 0, 941, 1672], "alpha": True, "fit": (512, 768)},
+    "gatekeeper_arm_front_v2": {"sheet": "final_generated_sources/gatekeeper_arm_front_v2", "roi": [0, 0, 1024, 1536], "alpha": True, "fit": (260, 420)},
+    "gatekeeper_weapon_hammer_v2": {"sheet": "final_generated_sources/gatekeeper_weapon_hammer_v2", "roi": [0, 0, 1774, 887], "alpha": True, "fit": (520, 220)},
+    "fallen_king_arm_front_v2": {"sheet": "final_generated_sources/fallen_king_arm_front_v2", "roi": [0, 0, 1024, 1536], "alpha": True, "fit": (280, 440)},
+    "fallen_king_shield_arm_v2": {"sheet": "final_generated_sources/fallen_king_shield_arm_v2", "roi": [0, 0, 1024, 1536], "alpha": True, "fit": (320, 480)},
+    "fallen_king_weapon_hammer_v2": {"sheet": "final_generated_sources/fallen_king_weapon_hammer_v2", "roi": [0, 0, 1774, 887], "alpha": True, "fit": (560, 240)},
     # --- assets6.png: UI + VFX ---
     "ui_heart_full": {"sheet": "assets6", "roi": [70, 40, 275, 240], "fit": (64, 64)},
     "ui_heart_empty": {"sheet": "assets6", "roi": [300, 40, 505, 240], "fit": (64, 64), "all_neutral": True},
@@ -131,6 +205,18 @@ SPRITES = {
     "vfx_red_telegraph_arc": {"sheet": "assets6", "roi": [1010, 260, 1400, 460], "fit": (768, 256)},
     "vfx_guard_spark": {"sheet": "assets6", "roi": [520, 450, 890, 730], "fit": (256, 256)},
     "vfx_burst_slash": {"sheet": "assets6", "roi": [20, 720, 660, 1070], "fit": (1024, 512)},
+}
+
+FINAL_KEYS = {
+    key
+    for key in SPRITES
+    if key.startswith(("spear_wraith_", "bell_templar_", "cinder_reaver_"))
+    or key in {
+        "fp_dagger", "fp_mace", "fp_spear", "fp_hammer",
+        "gatekeeper_arm_front_v2", "gatekeeper_weapon_hammer_v2",
+        "fallen_king_arm_front_v2", "fallen_king_shield_arm_v2",
+        "fallen_king_weapon_hammer_v2",
+    }
 }
 
 sheets = {
@@ -145,6 +231,12 @@ for key, spec in SPRITES.items():
 
     if spec.get("opaque"):
         img = Image.fromarray(crop[:, :, :3]).convert("RGBA")
+    elif spec.get("alpha"):
+        img = Image.fromarray(crop)
+        bbox = img.getbbox()
+        if bbox:
+            img = img.crop(bbox)
+        img = retain_largest_components(img, spec.get("keep_components", 1))
     else:
         keep = flood_key(crop[:, :, :3], all_neutral=spec.get("all_neutral", False))
         for ex0, ey0, ex1, ey1 in spec.get("erase", []):
@@ -192,6 +284,8 @@ for key, spec in SPRITES.items():
 if INSTALL:
     total = 0
     for key, img in results.items():
+        if FINAL_ONLY and key not in FINAL_KEYS:
+            continue
         path = DEST / f"{key}.png"
         img.quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(
             path, optimize=True

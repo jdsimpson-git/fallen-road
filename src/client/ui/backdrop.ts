@@ -13,7 +13,11 @@ export const HORIZON_Y = 460;
 export type BackdropHandles = {
   tower: Phaser.GameObjects.Image | null;
   gate: Phaser.GameObjects.Image | null;
+  towerAura: Phaser.GameObjects.Ellipse | null;
+  roadGlow: Phaser.GameObjects.Graphics | null;
 };
+
+const lastRoadsideSides = new WeakMap<Phaser.Scene, -1 | 1>();
 
 /**
  * A solid pine-tree silhouette centered on its trunk base at (0, 0).
@@ -158,20 +162,83 @@ const startEmbers = (scene: Phaser.Scene): void => {
  * One roadside silhouette rushing past — called on a timer while traveling
  * to sell forward motion down the road.
  */
-export const spawnRoadsideDrift = (scene: Phaser.Scene): void => {
-  const side = Math.random() < 0.5 ? -1 : 1;
-  const tree = pineSilhouette(scene, PAPER.nearTree, 150);
-  tree.setPosition(640 + side * (46 + Math.random() * 18), HORIZON_Y + 4);
-  tree.setScale(0.12);
-  tree.setAlpha(0.95);
+export const spawnRoadsideDrift = (scene: Phaser.Scene, intensity = 0): void => {
+  const previous = lastRoadsideSides.get(scene) ?? -1;
+  const side: -1 | 1 = Math.random() < 0.78 ? (previous === -1 ? 1 : -1) : previous;
+  lastRoadsideSides.set(scene, side);
+  const nearLane = Math.random() < 0.56;
+  spawnDriftingPine(scene, side, nearLane, intensity, 0);
+  if (Math.random() < 0.2) {
+    spawnDriftingPine(scene, side, false, intensity, 110 + Math.random() * 90);
+  }
+};
+
+const spawnDriftingPine = (
+  scene: Phaser.Scene,
+  side: -1 | 1,
+  nearLane: boolean,
+  intensity: number,
+  delay: number
+): void => {
+  const height = nearLane ? 150 + Math.random() * 45 : 100 + Math.random() * 38;
+  const startSpread = nearLane ? 66 + Math.random() * 24 : 46 + Math.random() * 18;
+  const endSpread =
+    (nearLane ? 600 + Math.random() * 190 : 410 + Math.random() * 130) +
+    intensity * 70;
+  const endScale =
+    (nearLane ? 1.8 + Math.random() * 0.72 : 0.9 + Math.random() * 0.45) +
+    intensity * (nearLane ? 0.3 : 0.12);
+  const baseDuration = nearLane
+    ? 1850 + Math.random() * 520
+    : 2850 + Math.random() * 680;
+  const duration = baseDuration * (1 - intensity * 0.2);
+  const tree = pineSilhouette(scene, PAPER.nearTree, height);
+  tree
+    .setPosition(640 + side * startSpread, HORIZON_Y + (nearLane ? 10 : 2))
+    .setScale(nearLane ? 0.11 : 0.07)
+    .setAngle(-side * (1.5 + Math.random() * 2.5))
+    .setAlpha(nearLane ? 0.97 : 0.7)
+    .setDepth(nearLane ? 4 : 2);
   scene.tweens.add({
     targets: tree,
-    x: 640 + side * (520 + Math.random() * 260),
-    y: 760,
-    scale: 1.5 + Math.random() * 0.7,
-    duration: 2500 + Math.random() * 500,
+    x: 640 + side * endSpread,
+    y: nearLane ? 770 : 728,
+    scale: endScale,
+    angle: side * (4 + Math.random() * 4),
+    alpha: nearLane ? 1 : 0.88,
+    delay,
+    duration,
     ease: 'Cubic.easeIn',
     onComplete: () => tree.destroy(),
+  });
+};
+
+/** Perspective flecks sliding underfoot make the painted road feel traversed. */
+export const spawnRoadMark = (scene: Phaser.Scene, intensity = 0): void => {
+  const lane = (Math.random() * 2 - 1) * 0.86;
+  const startX = 640 + lane * 36;
+  const endX = 640 + lane * 310;
+  const mark = scene.add
+    .rectangle(
+      startX,
+      HORIZON_Y + 8,
+      2,
+      7,
+      PAPER.rim,
+      0.2 + intensity * 0.1
+    )
+    .setDepth(1)
+    .setAngle((Math.atan2(280, endX - startX) * 180) / Math.PI - 90);
+  scene.tweens.add({
+    targets: mark,
+    x: endX,
+    y: 738,
+    scaleX: 3.5 + Math.random() * 2,
+    scaleY: 8 + Math.random() * 5,
+    alpha: 0,
+    duration: (1250 + Math.random() * 480) * (1 - intensity * 0.28),
+    ease: 'Cubic.easeIn',
+    onComplete: () => mark.destroy(),
   });
 };
 
@@ -201,9 +268,18 @@ export const buildBackdrop = (scene: Phaser.Scene): BackdropHandles => {
   scene.add
     .circle(985, 395, 78, PAPER.sunGlow, 0.2)
     .setBlendMode(Phaser.BlendModes.ADD);
-  scene.add
+  const sunHalo = scene.add
     .circle(985, 395, 130, PAPER.sunGlow, 0.08)
     .setBlendMode(Phaser.BlendModes.ADD);
+  scene.tweens.add({
+    targets: sunHalo,
+    alpha: { from: 0.55, to: 1 },
+    scale: { from: 0.96, to: 1.06 },
+    duration: 4200,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
+  });
 
   // Far rolling hills.
   const hills = scene.add.graphics();
@@ -217,6 +293,20 @@ export const buildBackdrop = (scene: Phaser.Scene): BackdropHandles => {
   hills.lineTo(1320, HORIZON_Y + 10);
   hills.closePath();
   hills.fillPath();
+
+  // A dim destination glow grows after each victory and blooms at the gates.
+  const towerAura = scene.add
+    .ellipse(640, HORIZON_Y - 20, 180, 120, PAPER.towerWindow, 0.1)
+    .setBlendMode(Phaser.BlendModes.ADD)
+    .setAlpha(0.42);
+  scene.tweens.add({
+    targets: towerAura,
+    y: { from: HORIZON_Y - 23, to: HORIZON_Y - 17 },
+    duration: 2300,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
+  });
 
   // Supplied tower art sits with its base on the horizon; else the drawn one.
   let tower: Phaser.GameObjects.Image | null = null;
@@ -277,33 +367,81 @@ export const buildBackdrop = (scene: Phaser.Scene): BackdropHandles => {
   road.lineBetween(300, 724, 598, HORIZON_Y);
   road.lineBetween(980, 724, 682, HORIZON_Y);
 
+  // Warm light catches the road center as the destination draws nearer.
+  const roadGlow = scene.add.graphics().setDepth(1).setAlpha(0.045);
+  roadGlow.fillStyle(PAPER.towerWindow, 1);
+  roadGlow.beginPath();
+  roadGlow.moveTo(617, HORIZON_Y + 3);
+  roadGlow.lineTo(663, HORIZON_Y + 3);
+  roadGlow.lineTo(770, 724);
+  roadGlow.lineTo(510, 724);
+  roadGlow.closePath();
+  roadGlow.fillPath();
+  roadGlow.setBlendMode(Phaser.BlendModes.ADD);
+  scene.tweens.add({
+    targets: roadGlow,
+    y: { from: -2, to: 3 },
+    duration: 2600,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
+  });
+
   // Near roadside sentinels.
-  pineSilhouette(scene, PAPER.nearTree, 150).setPosition(96, 700).setScale(1.7);
-  pineSilhouette(scene, PAPER.nearTree, 150)
-    .setPosition(214, 640)
-    .setScale(1.1);
-  pineSilhouette(scene, PAPER.nearTree, 150)
-    .setPosition(1180, 688)
-    .setScale(1.85);
-  pineSilhouette(scene, PAPER.nearTree, 150)
-    .setPosition(1058, 632)
-    .setScale(1.05);
+  const sentinels = [
+    { x: 96, y: 700, scale: 1.7, angle: -1.8, duration: 3400 },
+    { x: 214, y: 640, scale: 1.1, angle: 1.2, duration: 4100 },
+    { x: 1180, y: 688, scale: 1.85, angle: 1.7, duration: 3650 },
+    { x: 1058, y: 632, scale: 1.05, angle: -1.1, duration: 4400 },
+  ];
+  for (const sentinel of sentinels) {
+    const tree = pineSilhouette(scene, PAPER.nearTree, 150)
+      .setPosition(sentinel.x, sentinel.y)
+      .setScale(sentinel.scale)
+      .setAngle(-sentinel.angle);
+    scene.tweens.add({
+      targets: tree,
+      angle: sentinel.angle,
+      duration: sentinel.duration,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
 
   // Fog hugging the horizon and drifting embers.
-  scene.add
+  const farFog = scene.add
     .image(640, HORIZON_Y + 2, 'fog_band')
     .setDisplaySize(1320, 96)
     .setAlpha(0.5);
-  scene.add
+  const nearFog = scene.add
     .image(640, HORIZON_Y + 56, 'fog_band')
     .setDisplaySize(1320, 140)
     .setAlpha(0.22);
+  scene.tweens.add({
+    targets: farFog,
+    x: { from: 600, to: 680 },
+    alpha: { from: 0.42, to: 0.56 },
+    duration: 7200,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
+  });
+  scene.tweens.add({
+    targets: nearFog,
+    x: { from: 690, to: 590 },
+    alpha: { from: 0.16, to: 0.27 },
+    duration: 9400,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
+  });
   startEmbers(scene);
 
   // Film finish.
   addPaperOverlays(scene);
 
-  return { tower, gate };
+  return { tower, gate, towerAura, roadGlow };
 };
 
 /**
@@ -345,5 +483,5 @@ export const buildCastleBackdrop = (scene: Phaser.Scene): BackdropHandles => {
   startEmbers(scene);
 
   addPaperOverlays(scene);
-  return { tower: null, gate: null };
+  return { tower: null, gate: null, towerAura: null, roadGlow: null };
 };

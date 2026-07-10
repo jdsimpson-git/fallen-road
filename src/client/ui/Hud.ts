@@ -37,6 +37,12 @@ type Bar = {
   valueText?: Phaser.GameObjects.Text;
 };
 
+type QueuedMessage = {
+  text: string;
+  accent: string;
+  sizePx: number;
+};
+
 const GUARD_BUTTON = { x: 1102, y: 610, radius: 50 };
 const DODGE_BUTTON = { x: 178, y: 610, radius: 50 };
 const BURST_BUTTON = { x: 640, y: 666, width: 232, height: 50 };
@@ -60,6 +66,7 @@ const addAssetIcon = (
 export class Hud {
   private playerHealthBar: Bar;
   private playerGuardBar: Bar;
+  private runLine: Phaser.GameObjects.Text;
   private enemyHealthBar: Bar;
   private enemyGuardBar: Bar;
   private enemyCard: Phaser.GameObjects.Container;
@@ -78,13 +85,16 @@ export class Hud {
   private dodgeRing: Phaser.GameObjects.Graphics;
   private dodgeReady = true;
   private burstReady = false;
+  private readonly messageQueue: QueuedMessage[] = [];
+  private messageVisible = false;
+  private visibleMessageText: string | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly callbacks: HudCallbacks
   ) {
     // --- Player panel, top-left ---
-    this.panel(190, 66, 350, 104);
+    this.panel(190, 76, 350, 124);
     this.label(38, 24, 'YOU');
     if (!addAssetIcon(scene, 'ui_heart_full', 48, 60, 30, 61)) {
       inkHeart(scene).setPosition(48, 60).setDepth(61);
@@ -94,6 +104,15 @@ export class Hud {
       inkShieldGlyph(scene).setPosition(48, 89).setDepth(61);
     }
     this.playerGuardBar = this.bar(66, 89, 280, 12, PAPER.guard);
+    this.runLine = scene.add
+      .text(38, 111, '', {
+        fontFamily: FONT,
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: MUTED_TEXT,
+      })
+      .setOrigin(0, 0)
+      .setDepth(61);
 
     // --- Enemy panel, top-center (hidden while traveling) ---
     this.enemyCard = scene.add.container(0, 0);
@@ -313,6 +332,12 @@ export class Hud {
     this.enemyCard.setVisible(name !== null);
   }
 
+  /** Small persistent readout for the build that is currently on the road. */
+  setRunInfo(weaponName: string, gambitCount: number, coins: number): void {
+    const gambitLabel = gambitCount === 1 ? 'GAMBIT' : 'GAMBITS';
+    this.runLine.setText(`${weaponName.toUpperCase()} · ${gambitCount} ${gambitLabel} · ${coins} COINS`);
+  }
+
   /** True when the point sits on a HUD control — swipes should not start there. */
   isPointOverUi(x: number, y: number): boolean {
     const overGuard =
@@ -422,6 +447,20 @@ export class Hud {
 
   /** Banner message on a dark plate. */
   showMessage(text: string, accent = '#ffb347', sizePx = 34): void {
+    const previous = this.messageQueue.at(-1);
+    if (this.visibleMessageText === text || previous?.text === text) return;
+    if (this.messageQueue.length >= 4) this.messageQueue.shift();
+    this.messageQueue.push({ text, accent, sizePx });
+    this.showNextMessage();
+  }
+
+  private showNextMessage(): void {
+    if (this.messageVisible) return;
+    const message = this.messageQueue.shift();
+    if (!message) return;
+    this.messageVisible = true;
+    this.visibleMessageText = message.text;
+    const { text, accent, sizePx } = message;
     const accentColor = Number.parseInt(accent.replace('#', ''), 16);
     const label = this.scene.add
       .text(662, 190, text, {
@@ -466,6 +505,9 @@ export class Hud {
       duration: 260,
       onComplete: () => {
         for (const part of group) part.destroy();
+        this.messageVisible = false;
+        this.visibleMessageText = null;
+        this.showNextMessage();
       },
     });
   }
