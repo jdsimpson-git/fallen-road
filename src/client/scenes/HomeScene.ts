@@ -22,6 +22,11 @@ export class HomeScene extends Phaser.Scene {
     super('Home');
   }
 
+  /** Phaser reuses Scene instances, so clear per-visit input locks here. */
+  init(): void {
+    this.startingDailyRun = false;
+  }
+
   create(): void {
     buildBackdrop(this);
 
